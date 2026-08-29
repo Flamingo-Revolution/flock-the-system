@@ -20,6 +20,7 @@ export type LevelDefinition = {
   gravityY: number;
   jumpVelocity: number;
   obstacleDelayMs: number;
+  gateGap: number;
   skyColor: number;
   groundColor: number;
   obstacleColor: number;
@@ -32,13 +33,14 @@ export const qytetiISloganeve: LevelDefinition = {
   id: "qyteti-i-sloganeve",
   name: "Qyteti i Sloganeve",
   phase: "Faza 1",
-  intro: "Prek ekranin ose shtyp HAPESIRE per te hipur",
-  objective: "Kerce mbi pengesat, ulu nen dronet, kap zyrtaret ne ajer, dhe zbulo 8 genjeshtra.",
+  intro: "Prek per te nisur",
+  objective: "Prek per te fluturuar mes pengesave dhe zbulo 8 genjeshtra.",
   targetExposure: 8,
-  speed: 300,
-  gravityY: 1750,
-  jumpVelocity: -640,
-  obstacleDelayMs: 1250,
+  speed: 218,
+  gravityY: 980,
+  jumpVelocity: -345,
+  obstacleDelayMs: 1520,
+  gateGap: 172,
   skyColor: 0x9bdff0,
   groundColor: 0xc7d2a2,
   obstacleColor: 0xd94d64,
@@ -51,13 +53,14 @@ export const lagjjaEEkraneve: LevelDefinition = {
   id: "lagjja-e-ekraneve",
   name: "Lagjja e Ekraneve",
   phase: "Faza 2",
-  intro: "Prek ekranin ose shtyp HAPESIRE per te nderprere transmetimin",
-  objective: "Shmang antenat fluturuese, kap zyrtaret ne ajer, dhe zbulo 10 lajme te rreme.",
+  intro: "Prek per te prishur sinjalin",
+  objective: "Fluturo mes antenave dhe zbulo 10 lajme te rreme.",
   targetExposure: 10,
-  speed: 330,
-  gravityY: 1820,
-  jumpVelocity: -655,
-  obstacleDelayMs: 1150,
+  speed: 236,
+  gravityY: 1010,
+  jumpVelocity: -356,
+  obstacleDelayMs: 1450,
+  gateGap: 164,
   skyColor: 0xb8c0ff,
   groundColor: 0xa8dadc,
   obstacleColor: 0x263238,

@@ -23,6 +23,7 @@ export default function App() {
   const [selectedLevelId, setSelectedLevelId] = useState(DEFAULT_LEVEL_ID);
   const selectedLevel = getLevel(selectedLevelId);
   const [completedLevels, setCompletedLevels] = useState(readCompletedLevels);
+  const [isStageMenuOpen, setIsStageMenuOpen] = useState(false);
   const [stats, setStats] = useState<GameStats>({
     levelId: selectedLevel.id,
     levelName: selectedLevel.name,
@@ -42,6 +43,11 @@ export default function App() {
   function sendCommand(command: GameCommand) {
     window.dispatchEvent(new CustomEvent<GameCommand>(GAME_COMMAND_EVENT, { detail: command }));
     gameHost.current?.focus();
+  }
+
+  function startGame() {
+    setIsStageMenuOpen(false);
+    sendCommand("start");
   }
 
   useEffect(() => {
@@ -74,16 +80,23 @@ export default function App() {
     };
   }, [selectedLevelId]);
 
+  const showStartScreen =
+    stats.status === "ready" || stats.status === "won" || stats.status === "lost";
+
   return (
     <main className="app-shell">
-      <header className="top-bar">
-        <div>
-          <p className="eyebrow">Tufa kundër Sistemit</p>
+      <section className="game-layout" aria-label="Loja">
+        <div ref={gameHost} className="game-host" tabIndex={-1} />
+      </section>
+
+      <header className={stats.status === "playing" ? "hud compact" : "hud"}>
+        <div className="brand">
+          <p className="eyebrow">Tufa kunder Sistemit</p>
           <h1>{stats.levelName}</h1>
         </div>
         <dl className="stats">
           <div>
-            <dt>Pikë</dt>
+            <dt>Pike</dt>
             <dd>{stats.score}</dd>
           </div>
           <div>
@@ -101,35 +114,46 @@ export default function App() {
             <dd>x{stats.combo}</dd>
           </div>
           <div>
-            <dt>Jetë</dt>
+            <dt>Jete</dt>
             <dd>{stats.lives}</dd>
           </div>
         </dl>
       </header>
 
-      <section className="game-layout" aria-label="Game">
-        <div ref={gameHost} className="game-host" tabIndex={-1} />
-        <aside className="side-panel">
-          <p className="stage-state">{stats.message}</p>
-          <div className="command-row">
-            <button
-              type="button"
-              disabled={stats.status === "playing" || stats.status === "paused"}
-              onClick={() => sendCommand("start")}
-            >
-              Nis
-            </button>
-            <button
-              type="button"
-              disabled={stats.status === "ready" || stats.status === "won" || stats.status === "lost"}
-              onClick={() => sendCommand("pause")}
-            >
-              {stats.status === "paused" ? "Vazhdo" : "Pauzë"}
-            </button>
-            <button type="button" onClick={() => sendCommand("restart")}>
-              Rinis
-            </button>
+      {showStartScreen ? (
+        <section className="start-screen" aria-label="Nisja" onClick={startGame}>
+          <div className="start-copy">
+            <p className="phase-label">{selectedLevel.phase}</p>
+            <h2>{selectedLevel.name}</h2>
+            <p>{stats.message}</p>
           </div>
+          <button type="button" className="primary-start" onClick={startGame}>
+            Prek per te nisur
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setIsStageMenuOpen((isOpen) => !isOpen);
+            }}
+          >
+            Fazat
+          </button>
+        </section>
+      ) : (
+        <div className="play-controls">
+          <button type="button" onClick={() => sendCommand("pause")}>
+            {stats.status === "paused" ? "Vazhdo" : "Pauze"}
+          </button>
+          <button type="button" onClick={() => sendCommand("restart")}>
+            Rinis
+          </button>
+        </div>
+      )}
+
+      {isStageMenuOpen ? (
+        <aside className="stage-drawer" aria-label="Fazat">
           <h2>Fazat</h2>
           <div className="level-list">
             {levels.map((level, index) => {
@@ -143,7 +167,10 @@ export default function App() {
                   type="button"
                   className={isSelected ? "level-button selected" : "level-button"}
                   disabled={!isUnlocked}
-                  onClick={() => setSelectedLevelId(level.id)}
+                  onClick={() => {
+                    setSelectedLevelId(level.id);
+                    setIsStageMenuOpen(false);
+                  }}
                 >
                   <span>{level.phase}</span>
                   {level.name}
@@ -153,7 +180,7 @@ export default function App() {
             })}
           </div>
         </aside>
-      </section>
+      ) : null}
     </main>
   );
 }

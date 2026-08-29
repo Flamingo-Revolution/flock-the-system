@@ -25,10 +25,10 @@ body {
 }
 
 button {
-  min-height: 46px;
+  min-height: 48px;
   border: 0;
   border-radius: 8px;
-  padding: 0 14px;
+  padding: 0 16px;
   color: #ffffff;
   background: #d94d64;
   font: inherit;
@@ -75,24 +75,28 @@ button:disabled {
   height: 100%;
 }
 
-.top-bar {
+.hud {
   position: fixed;
   top: max(10px, env(safe-area-inset-top));
-  left: 10px;
-  right: 10px;
+  left: max(10px, env(safe-area-inset-left));
+  right: max(10px, env(safe-area-inset-right));
   z-index: 10;
   display: grid;
   gap: 8px;
   pointer-events: none;
 }
 
-.top-bar > *,
-.side-panel {
+.brand,
+.stats,
+.start-screen,
+.stage-drawer,
+.play-controls {
   pointer-events: auto;
 }
 
-.eyebrow {
-  margin: 0 0 2px;
+.eyebrow,
+.phase-label {
+  margin: 0 0 3px;
   color: #d94d64;
   font-size: 0.68rem;
   font-weight: 900;
@@ -114,9 +118,8 @@ h1 {
   text-shadow: 0 3px 0 rgba(31, 41, 55, 0.42);
 }
 
-h2 {
-  margin-bottom: 8px;
-  font-size: 0.92rem;
+.compact .brand {
+  display: none;
 }
 
 .stats {
@@ -128,7 +131,8 @@ h2 {
 }
 
 .stats div,
-.side-panel {
+.stage-drawer,
+.play-controls {
   border: 1px solid rgba(31, 41, 55, 0.2);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.86);
@@ -157,35 +161,88 @@ h2 {
   font-weight: 900;
 }
 
-.side-panel {
+.start-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  align-content: end;
+  justify-items: center;
+  gap: 14px;
+  padding:
+    max(24px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right))
+    max(30px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+  background: linear-gradient(
+    to bottom,
+    rgba(20, 28, 43, 0.12),
+    rgba(20, 28, 43, 0.08) 38%,
+    rgba(20, 28, 43, 0.46)
+  );
+  text-align: center;
+}
+
+.start-copy h2 {
+  margin-bottom: 8px;
+  color: #ffffff;
+  font-size: clamp(2.2rem, 13vw, 5.4rem);
+  line-height: 0.95;
+  text-shadow: 0 4px 0 rgba(31, 41, 55, 0.42);
+}
+
+.start-copy p:last-child {
+  margin-bottom: 0;
+  color: #ffffff;
+  font-weight: 800;
+  text-shadow: 0 2px 0 rgba(31, 41, 55, 0.38);
+}
+
+.primary-start {
+  width: min(360px, 100%);
+  min-height: 64px;
+  font-size: 1.2rem;
+}
+
+.secondary-button {
+  width: min(220px, 76%);
+  color: #263238;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px #ebd8c1;
+}
+
+.secondary-button:hover {
+  color: #ffffff;
+  background: #263238;
+}
+
+.play-controls {
   position: fixed;
   right: max(10px, env(safe-area-inset-right));
   bottom: max(10px, env(safe-area-inset-bottom));
-  left: max(10px, env(safe-area-inset-left));
-  z-index: 10;
-  max-height: 36dvh;
-  overflow: auto;
-  padding: 12px;
-}
-
-.stage-state {
-  margin-bottom: 10px;
-  border-bottom: 1px solid #ebd8c1;
-  padding-bottom: 10px;
-  color: #1f2937;
-  font-weight: 900;
-  line-height: 1.25;
-}
-
-.command-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  z-index: 20;
+  display: flex;
   gap: 8px;
-  margin-bottom: 12px;
+  padding: 8px;
 }
 
-.command-row button {
-  padding: 0 8px;
+.play-controls button {
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.stage-drawer {
+  position: fixed;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: max(170px, calc(env(safe-area-inset-bottom) + 170px));
+  left: max(14px, env(safe-area-inset-left));
+  z-index: 30;
+  max-height: 42dvh;
+  overflow: auto;
+  padding: 14px;
+}
+
+.stage-drawer h2 {
+  margin-bottom: 10px;
+  font-size: 1rem;
 }
 
 .level-list {
@@ -226,7 +283,7 @@ h2 {
 }
 
 @media (min-width: 760px) {
-  .top-bar {
+  .hud {
     top: 16px;
     left: 16px;
     right: 16px;
@@ -234,26 +291,23 @@ h2 {
     align-items: start;
   }
 
+  .compact {
+    display: block;
+    width: min(560px, calc(100vw - 32px));
+  }
+
   h1 {
     max-width: 44vw;
   }
 
-  .side-panel {
+  .start-screen {
+    padding-bottom: 46px;
+  }
+
+  .stage-drawer {
+    right: 22px;
+    bottom: 118px;
     left: auto;
-    width: 336px;
-    max-height: calc(100dvh - 154px);
-    padding: 16px;
-  }
-
-  .stats div {
-    padding: 9px 10px;
-  }
-
-  .stats dt {
-    font-size: 0.66rem;
-  }
-
-  .stats dd {
-    font-size: 1.18rem;
+    width: 360px;
   }
 }
