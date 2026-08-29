@@ -31,7 +31,7 @@ export default function App() {
     lives: 3,
     combo: 1,
     status: "ready",
-    message: "Press Enter to start",
+    message: selectedLevel.intro,
   });
   const [bestScore, setBestScore] = useState(() => {
     const storedBestScore = Number(window.localStorage.getItem(BEST_SCORE_KEY) ?? 0);
@@ -78,28 +78,30 @@ export default function App() {
     <main className="app-shell">
       <header className="top-bar">
         <div>
-          <p className="eyebrow">Flock the System</p>
+          <p className="eyebrow">Tufa kundër Sistemit</p>
           <h1>{stats.levelName}</h1>
         </div>
         <dl className="stats">
           <div>
-            <dt>Score</dt>
+            <dt>Pikë</dt>
             <dd>{stats.score}</dd>
           </div>
           <div>
-            <dt>Best</dt>
+            <dt>Rekord</dt>
             <dd>{bestScore}</dd>
           </div>
           <div>
-            <dt>Exposure</dt>
-            <dd>{stats.exposure}%</dd>
+            <dt>Zbulime</dt>
+            <dd>
+              {stats.exposure}/{selectedLevel.targetExposure}
+            </dd>
           </div>
           <div>
-            <dt>Combo</dt>
+            <dt>Seri</dt>
             <dd>x{stats.combo}</dd>
           </div>
           <div>
-            <dt>Lives</dt>
+            <dt>Jetë</dt>
             <dd>{stats.lives}</dd>
           </div>
         </dl>
@@ -115,20 +117,20 @@ export default function App() {
               disabled={stats.status === "playing" || stats.status === "paused"}
               onClick={() => sendCommand("start")}
             >
-              Start
+              Nis
             </button>
             <button
               type="button"
               disabled={stats.status === "ready" || stats.status === "won" || stats.status === "lost"}
               onClick={() => sendCommand("pause")}
             >
-              {stats.status === "paused" ? "Resume" : "Pause"}
+              {stats.status === "paused" ? "Vazhdo" : "Pauzë"}
             </button>
             <button type="button" onClick={() => sendCommand("restart")}>
-              Restart
+              Rinis
             </button>
           </div>
-          <h2>Stages</h2>
+          <h2>Fazat</h2>
           <div className="level-list">
             {levels.map((level, index) => {
               const previousLevel = levels[index - 1];
@@ -145,16 +147,11 @@ export default function App() {
                 >
                   <span>{level.phase}</span>
                   {level.name}
-                  {completedLevels.has(level.id) ? <strong>Cleared</strong> : null}
+                  {completedLevels.has(level.id) ? <strong>Kaluar</strong> : null}
                 </button>
               );
             })}
           </div>
-          <h2>Controls</h2>
-          <p>
-            Use WASD or arrow keys to fly. Press space to drop truth bombs. P pauses, R restarts,
-            and Enter can start the selected stage.
-          </p>
         </aside>
       </section>
     </main>

@@ -22,6 +22,8 @@ npm run preview
 
 The GitHub Pages workflow is in `.github/workflows/deploy.yml`. In GitHub repository settings, enable Pages and choose **GitHub Actions** as the source.
 
+Current gameplay rules are documented in [`RULES.md`](RULES.md).
+
 ## Core Idea
 
 A pink flamingo flies across an exaggerated Albanian city where propaganda is everywhere: billboards, ministries, media towers, fake construction sites, loudspeakers, surveillance drones, and staged public ceremonies.
