@@ -30,6 +30,42 @@ export default function App() {
     return storedBestScore;
   });
 
+  const [shareToast, setShareToast] = useState<string | null>(null);
+
+  const handleShare = async (event: React.MouseEvent) => {
+    event.stopPropagation();
+    const isAntagonistWin = stats.score >= 1000;
+    const shareText = isAntagonistWin
+      ? `🦩🏛️ Futa Ramën & Berishën në burg te "Flamingoja e Fundit"! Zbulova ${stats.exposure} skandale me ${stats.score} pikë! RNBNB! A më mund dot në Shesh? #FlockTheSystem`
+      : `🦩 Arrita ${stats.score} pikë dhe zbulova ${stats.exposure} të vërteta te "Flamingoja e Fundit"! RNBNB! #FlockTheSystem`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Flamingoja e Fundit - Flock The System",
+          text: shareText,
+          url: window.location.href,
+        });
+        setShareToast("✅ Rezultati u nda!");
+        setTimeout(() => setShareToast(null), 2500);
+        return;
+      } catch (err) {
+        // Fallback to clipboard
+      }
+    }
+
+    if (navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(`${shareText}\n${window.location.href}`);
+        setShareToast("📋 Teksti u kopjua! Gati për Story / WhatsApp!");
+        setTimeout(() => setShareToast(null), 2500);
+      } catch (err) {
+        setShareToast("⚠️ Nuk mund të kopjohej teksti.");
+        setTimeout(() => setShareToast(null), 2000);
+      }
+    }
+  };
+
   function sendCommand(command: GameCommand) {
     window.dispatchEvent(new CustomEvent<GameCommand>(GAME_COMMAND_EVENT, { detail: command }));
     gameHost.current?.focus();
@@ -154,13 +190,22 @@ export default function App() {
       {showStartScreen ? (
         <section className="start-screen" aria-label="Nisja" onClick={startGame}>
           <div className="start-card">
+            {stats.status === "ready" ? (
+              <div className="brand-logo-container">
+                <img
+                  src={`${import.meta.env.BASE_URL}assets/logo final eu.svg`}
+                  alt="Flamingo e Fundit"
+                  className="brand-logo-hero"
+                />
+              </div>
+            ) : null}
             <p className="phase-label">{selectedLevel.phase}</p>
             <h2>
               {stats.status === "won"
                 ? "Sheshi u Çlirua!"
                 : stats.status === "lost"
                   ? "Fund Marshimi!"
-                  : selectedLevel.name}
+                  : "Flamingo e Fundit"}
             </h2>
             <p className="status-subtext">{stats.message}</p>
 
@@ -196,6 +241,22 @@ export default function App() {
                     ? "Vazhdo Marshimin"
                     : "Nis Marshimin"}
               </button>
+
+              {stats.status === "lost" || stats.status === "won" ? (
+                <button
+                  type="button"
+                  className="share-button"
+                  onClick={handleShare}
+                >
+                  📢 Shpërndaj në Story / WhatsApp
+                </button>
+              ) : null}
+
+              {shareToast ? (
+                <div className="share-toast" role="status">
+                  {shareToast}
+                </div>
+              ) : null}
 
               <div className="secondary-row">
                 <button

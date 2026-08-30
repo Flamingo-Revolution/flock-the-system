@@ -257,6 +257,33 @@ button:disabled {
   gap: 12px;
 }
 
+.brand-logo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin-top: 4px;
+  margin-bottom: 2px;
+}
+
+.brand-logo-hero {
+  width: min(280px, 82vw);
+  height: auto;
+  max-height: 100px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 14px rgba(255, 79, 139, 0.4));
+  animation: logoFloat 3.2s ease-in-out infinite alternate;
+}
+
+@keyframes logoFloat {
+  0% {
+    transform: translateY(0px) scale(1);
+  }
+  100% {
+    transform: translateY(-4px) scale(1.02);
+  }
+}
+
 .phase-label {
   margin: 0;
   color: #ffd23f;
@@ -337,6 +364,49 @@ button:disabled {
   min-height: 56px;
   font-size: 1.15rem;
   text-transform: uppercase;
+}
+
+.share-button {
+  width: 100%;
+  min-height: 48px;
+  background: linear-gradient(135deg, #00b4d8 0%, #0077b6 100%);
+  color: #ffffff;
+  font-size: 0.95rem;
+  letter-spacing: 0.3px;
+  box-shadow: 0 4px 0 #10131d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.share-button:hover {
+  background: linear-gradient(135deg, #0096c7 0%, #023e8a 100%);
+  color: #ffd23f;
+}
+
+.share-toast {
+  width: 100%;
+  padding: 8px 12px;
+  background: #10131d;
+  border: 1.5px solid #06d6a0;
+  border-radius: 8px;
+  color: #06d6a0;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-align: center;
+  animation: fadeInToast 0.2s ease-out;
+}
+
+@keyframes fadeInToast {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .next-stage-btn {

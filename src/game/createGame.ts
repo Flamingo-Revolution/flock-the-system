@@ -13,6 +13,7 @@ import {
   type PolitikanDefinition,
   type ZbulimDefinition,
 } from "./levels";
+import type { PersonObstacle } from "./obstacles";
 
 const ASSET_BASE = `${import.meta.env.BASE_URL}assets/`;
 const PLAYER_X_RATIO = 0.18;
@@ -49,6 +50,16 @@ type LabelBinding = {
 };
 
 type ObstacleCategory = "ground_low" | "ground_med" | "ground_tall" | "air";
+
+function triggerHaptic(pattern: number | number[]) {
+  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      // Ignored if browser permissions don't allow
+    }
+  }
+}
 
 function createInitialStats(level: LevelDefinition): GameStats {
   return {
@@ -105,6 +116,10 @@ class RunnerScene extends Phaser.Scene {
   private bossChaseSprite?: Phaser.GameObjects.Image;
   private bossChaseBubble?: Phaser.GameObjects.Text;
   private bossChaseActive = false;
+  private sceneryGroup!: Phaser.GameObjects.Group;
+  private nextSceneryAt = 0;
+  private nextGraffitiAt = 0;
+  private nextNewsTickerAt = 10000;
   private stats!: GameStats;
 
   private readonly handleCommand = (event: Event) => {
@@ -178,6 +193,7 @@ class RunnerScene extends Phaser.Scene {
     this.groundTop = this.scale.height - GROUND_HEIGHT;
 
     this.drawWorld();
+    this.sceneryGroup = this.add.group();
     this.obstacles = this.physics.add.group();
     this.collectibles = this.physics.add.group();
 
@@ -304,6 +320,91 @@ class RunnerScene extends Phaser.Scene {
       cageGfx.generateTexture("prison-cage", 56, 78);
       cageGfx.destroy();
     }
+
+    if (!this.textures.exists("graffiti-rnbnb")) {
+      const canvasTex = this.textures.createCanvas("graffiti-rnbnb", 68, 20);
+      if (canvasTex) {
+        const ctx = canvasTex.context;
+        ctx.fillStyle = "#ff2a4b";
+        ctx.font = "900 13px 'Outfit', sans-serif";
+        ctx.fillText("RNBNB", 4, 15);
+        canvasTex.refresh();
+      }
+    }
+
+    if (!this.textures.exists("graffiti-3m")) {
+      const canvasTex = this.textures.createCanvas("graffiti-3m", 80, 20);
+      if (canvasTex) {
+        const ctx = canvasTex.context;
+        ctx.fillStyle = "#ffd23f";
+        ctx.font = "900 12px 'Outfit', sans-serif";
+        ctx.fillText("3 MILIONË", 4, 15);
+        canvasTex.refresh();
+      }
+    }
+
+    if (!this.textures.exists("graffiti-burg")) {
+      const canvasTex = this.textures.createCanvas("graffiti-burg", 60, 20);
+      if (canvasTex) {
+        const ctx = canvasTex.context;
+        ctx.fillStyle = "#06d6a0";
+        ctx.font = "900 13px 'Outfit', sans-serif";
+        ctx.fillText("BURG!", 4, 15);
+        canvasTex.refresh();
+      }
+    }
+
+    if (!this.textures.exists("graffiti-5d")) {
+      const canvasTex = this.textures.createCanvas("graffiti-5d", 54, 20);
+      if (canvasTex) {
+        const ctx = canvasTex.context;
+        ctx.fillStyle = "#ec4899";
+        ctx.font = "900 13px 'Outfit', sans-serif";
+        ctx.fillText("5D!", 4, 15);
+        canvasTex.refresh();
+      }
+    }
+
+    if (!this.textures.exists("graffiti-spak")) {
+      const canvasTex = this.textures.createCanvas("graffiti-spak", 60, 20);
+      if (canvasTex) {
+        const ctx = canvasTex.context;
+        ctx.fillStyle = "#38bdf8";
+        ctx.font = "900 13px 'Outfit', sans-serif";
+        ctx.fillText("SPAK", 4, 15);
+        canvasTex.refresh();
+      }
+    }
+
+    if (!this.textures.exists("ertv-van")) {
+      const v = this.make.graphics({ x: 0, y: 0 }, false);
+      v.fillStyle(0x1e293b, 1);
+      v.fillRoundedRect(0, 8, 54, 24, 4);
+      v.fillStyle(0x38bdf8, 0.9);
+      v.fillRect(4, 11, 14, 9);
+      v.lineStyle(2, 0xef4444, 1);
+      v.lineBetween(32, 8, 32, 2);
+      v.fillStyle(0xffd23f, 1);
+      v.fillCircle(32, 2, 4);
+      v.fillStyle(0x0f172a, 1);
+      v.fillCircle(12, 32, 5);
+      v.fillCircle(42, 32, 5);
+      v.generateTexture("ertv-van", 56, 38);
+      v.destroy();
+    }
+
+    if (!this.textures.exists("neon-billboard")) {
+      const b = this.make.graphics({ x: 0, y: 0 }, false);
+      b.lineStyle(2, 0x334155, 1);
+      b.lineBetween(14, 28, 14, 42);
+      b.lineBetween(66, 28, 66, 42);
+      b.fillStyle(0x0f172a, 0.95);
+      b.fillRoundedRect(0, 0, 80, 28, 4);
+      b.lineStyle(2, 0xec4899, 0.85);
+      b.strokeRoundedRect(0, 0, 80, 28, 4);
+      b.generateTexture("neon-billboard", 80, 44);
+      b.destroy();
+    }
   }
 
   update(time: number, delta: number) {
@@ -399,7 +500,143 @@ class RunnerScene extends Phaser.Scene {
     // Dynamic Day-to-Night Satirical Cycle
     this.updateDayNightCycle();
 
+    // Dynamic Tirana Parallax Easter Eggs & Street Graffiti
+    this.updateScenery(time, delta);
+
+    // Periodic Real-Time Satirical Breaking News Tickers
+    if (this.stats.status === "playing" && time >= this.nextNewsTickerAt) {
+      this.nextNewsTickerAt = time + Phaser.Math.Between(16000, 24000);
+      const tickers = [
+        "📰 SPAK: Dosja 5D zbulon se drejtorët kishin votuar 100% për kompaninë e vet!",
+        "📰 LAJM I FUNDIT: Inceneratori nuk u gjet në vendngjarje, u gjet vetëm fatura!",
+        "📰 SKANDAL: Koncesioni i Sterilizimit paguan 800€ për çdo hapje gërshërësh!",
+        "📰 LIVE NGA ZVICRA: Tigri deklaron se inceneratori funksionon me bluetooth!",
+        "📰 RAPORT: Patronazhistët zbuluan se flamingoja po refuzon propagandën!",
+        "📰 NJOFTIM: Porti i Durrësit u transformua në parking jahtesh pa taksa!",
+        "📰 KUVEND: Deputeti i lokalit porosit kafen e 6-të me dietat e shtetit!",
+        "📰 ERTV: Kronika e gatshme u transmetua 2 orë para se të niste ngjarja!",
+      ];
+      this.showBreakingNews(Phaser.Utils.Array.GetRandom(tickers));
+    }
+
     this.cleanupObjects();
+  }
+
+  private updateScenery(time: number, delta: number) {
+    const seconds = delta / 1000;
+    const speed = this.currentSpeed();
+
+    // Move existing scenery items
+    this.sceneryGroup?.getChildren().forEach((child) => {
+      const sprite = child as Phaser.GameObjects.Image;
+      const speedMult = (sprite.getData("speedMult") as number) || 1.0;
+      sprite.x -= speed * speedMult * seconds;
+
+      const bindingText = sprite.getData("bindingText") as Phaser.GameObjects.Text | undefined;
+      if (bindingText && bindingText.active) {
+        bindingText.x = sprite.x;
+      }
+
+      if (sprite.x < -140) {
+        bindingText?.destroy();
+        this.sceneryGroup.remove(sprite, true, true);
+      }
+    });
+
+    if (this.stats.status !== "playing") return;
+
+    // Spawn Skyline Easter Eggs (Neon Billboards / ERTV Vans)
+    if (time >= this.nextSceneryAt) {
+      this.nextSceneryAt = time + Phaser.Math.Between(4200, 7800);
+      const isBillboard = Math.random() < 0.58;
+
+      if (isBillboard) {
+        const billboard = this.add.image(this.scale.width + 60, this.scale.height - 212, "neon-billboard");
+        billboard.setDepth(DEPTH_BACKGROUND_FRONT + 1);
+        billboard.setData("speedMult", 0.28);
+
+        const sloganPairs = [
+          { prop: "FASADA 100%", truth: "GËNJESHTËR!" },
+          { prop: "INCENERATORI", truth: "VETËM FATURA!" },
+          { prop: "DOSJA 5D", truth: "TENDERAT VETES" },
+          { prop: "STERILIZIMI", truth: "ÇMIM FLORIRI" },
+          { prop: "PATRONAZHISTËT", truth: "JU SHOHIM" },
+          { prop: "PORTI DURRËSIT", truth: "JAHTE JO PORT" },
+          { prop: "S'KA INFLACION", truth: "VAJI 300L" },
+          { prop: "KONCESION 99V", truth: "SPAK PO VJEN" },
+          { prop: "ERTV LIVE", truth: "SALLA BOSH" },
+        ];
+        const pair = Phaser.Utils.Array.GetRandom(sloganPairs);
+
+        const textObj = this.add
+          .text(billboard.x, billboard.y - 8, pair.prop, {
+            fontFamily: "Outfit, sans-serif",
+            fontSize: "9px",
+            fontStyle: "bold",
+            color: "#00f5b4",
+          })
+          .setOrigin(0.5)
+          .setDepth(DEPTH_BACKGROUND_FRONT + 2);
+
+        billboard.setData("bindingText", textObj);
+
+        // Glitch flicker tween alternating between propaganda & truth
+        this.time.addEvent({
+          delay: 1400,
+          repeat: 5,
+          callback: () => {
+            if (!textObj.active) return;
+            textObj.setAlpha(0.15);
+            this.time.delayedCall(90, () => {
+              if (!textObj.active) return;
+              textObj.setAlpha(1);
+              const isTruth = textObj.text === pair.prop;
+              textObj.setText(isTruth ? pair.truth : pair.prop);
+              textObj.setColor(isTruth ? "#ff2a4b" : "#00f5b4");
+            });
+          },
+        });
+
+        this.sceneryGroup.add(billboard);
+      } else {
+        const van = this.add.image(this.scale.width + 50, this.scale.height - 188, "ertv-van");
+        van.setDepth(DEPTH_BACKGROUND_FRONT + 1);
+        van.setData("speedMult", 0.28);
+
+        const vanLabel = this.add
+          .text(van.x, van.y - 2, "ERTV", {
+            fontFamily: "Outfit, sans-serif",
+            fontSize: "8px",
+            fontStyle: "900",
+            color: "#ffd23f",
+          })
+          .setOrigin(0.5)
+          .setDepth(DEPTH_BACKGROUND_FRONT + 2);
+
+        van.setData("bindingText", vanLabel);
+        this.sceneryGroup.add(van);
+      }
+    }
+
+    // Spawn Ground Graffiti Tags
+    if (time >= this.nextGraffitiAt) {
+      this.nextGraffitiAt = time + Phaser.Math.Between(2800, 5200);
+      const graffitiKeys = [
+        "graffiti-rnbnb",
+        "graffiti-3m",
+        "graffiti-burg",
+        "graffiti-5d",
+        "graffiti-spak",
+      ];
+      const key = Phaser.Utils.Array.GetRandom(graffitiKeys);
+
+      const tag = this.add.image(this.scale.width + 40, this.groundTop + 24, key);
+      tag.setDepth(DEPTH_GROUND + 1);
+      tag.setAlpha(0.78);
+      tag.setAngle(Phaser.Math.Between(-4, 4));
+      tag.setData("speedMult", 1.0);
+      this.sceneryGroup.add(tag);
+    }
   }
 
   private updateDayNightCycle() {
@@ -603,6 +840,7 @@ class RunnerScene extends Phaser.Scene {
     this.player.setTexture("flamingo-a");
 
     soundManager.playJump();
+    triggerHaptic(15);
     this.emitDust(this.player.x, this.groundTop - 2, 5);
 
     // Jump launch squash and stretch
@@ -623,7 +861,7 @@ class RunnerScene extends Phaser.Scene {
     this.player.setVelocityY(this.player.body.velocity.y * JUMP_CUT_MULTIPLIER);
   }
 
-  // --- OBSTACLE DIRECTOR (Continuous Multi-Tier Scaling) ---
+  // --- OBSTACLE DIRECTOR (Fair & Rhythmic Arcade Spacing) ---
   private scheduleObstacleDirector(overrideDelay?: number) {
     if (this.stats.status !== "playing") return;
 
@@ -632,26 +870,21 @@ class RunnerScene extends Phaser.Scene {
 
     if (!nextDelay) {
       if (elapsedSeconds < 18) {
-        // 0-18s: Warmup, generous breathing room (1650ms - 2150ms)
-        nextDelay = Phaser.Math.Between(1650, 2150);
+        // 0-18s: Warmup runway (1700ms - 2200ms)
+        nextDelay = Phaser.Math.Between(1700, 2200);
       } else if (elapsedSeconds < 40) {
-        // 18-40s: Steady building pace (1350ms - 1750ms)
-        nextDelay = Phaser.Math.Between(1350, 1750);
-      } else if (elapsedSeconds < 70) {
-        // 40-70s (The Middle / Night Phase): Noticeably tighter spacing (850ms - 1250ms)
-        const baseDelay = 1250 / this.currentSpeedMultiplier();
-        const jitter = Phaser.Math.Between(-140, 160);
-        nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 850, 1250);
-      } else if (elapsedSeconds < 100) {
-        // 70-100s (High Intensity): Fast reaction cadence (680ms - 980ms)
-        const baseDelay = 1050 / this.currentSpeedMultiplier();
+        // 18-40s: Steady building rhythm (1400ms - 1800ms)
+        nextDelay = Phaser.Math.Between(1400, 1800);
+      } else if (elapsedSeconds < 75) {
+        // 40-75s: Mid-game pressure with fair landing recovery (1150ms - 1500ms)
+        const baseDelay = 1400 / Math.pow(this.currentSpeedMultiplier(), 0.6);
         const jitter = Phaser.Math.Between(-120, 140);
-        nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 680, 980);
+        nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 1050, 1500);
       } else {
-        // 100s+ (Master Rush): Rapid arcade fire (540ms - 800ms)
-        const baseDelay = 850 / this.currentSpeedMultiplier();
+        // 75s+: High speed arcade cadence (minimum 960ms for clean landing resets)
+        const baseDelay = 1200 / Math.pow(this.currentSpeedMultiplier(), 0.6);
         const jitter = Phaser.Math.Between(-100, 120);
-        nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 540, 800);
+        nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 960, 1350);
       }
     }
 
@@ -683,37 +916,27 @@ class RunnerScene extends Phaser.Scene {
       } else {
         this.spawnGroundObstacle("ground_tall");
       }
-    } else if (elapsedSeconds < 65) {
-      // 35-65s (The Middle / Night Phase): Balanced mix with 32% air hazards + 22% double paper clusters!
+    } else if (elapsedSeconds < 70) {
+      // 35-70s: Balanced mix with 30% air hazards + 24% double packs (cleared in 1 leap)
       const roll = Math.random();
-      if (roll < 0.32 && this.lastSpawnCategory !== "ground_tall") {
+      if (roll < 0.30 && this.lastSpawnCategory !== "ground_tall") {
         this.spawnAirHazard();
       } else if (roll < 0.54) {
-        this.spawnDoubleCluster();
-      } else if (roll < 0.76) {
-        this.spawnGroundObstacle("ground_med");
-      } else {
-        this.spawnGroundObstacle("ground_tall");
-      }
-    } else if (elapsedSeconds < 100) {
-      // 65-100s (High Intensity): 38% air hazards + 35% double clusters + tall ministries!
-      const roll = Math.random();
-      if (roll < 0.38 && this.lastSpawnCategory !== "ground_tall") {
-        this.spawnAirHazard();
-      } else if (roll < 0.68) {
-        this.spawnDoubleCluster();
-      } else if (roll < 0.85) {
+        this.spawnDoublePack();
+      } else if (roll < 0.78) {
         this.spawnGroundObstacle("ground_med");
       } else {
         this.spawnGroundObstacle("ground_tall");
       }
     } else {
-      // 100s+ (Master Zone): Continuous relentless variety!
+      // 70s+: Full speed arcade variety with fair landing gaps
       const roll = Math.random();
-      if (roll < 0.42 && this.lastSpawnCategory !== "ground_tall") {
+      if (roll < 0.35 && this.lastSpawnCategory !== "ground_tall") {
         this.spawnAirHazard();
-      } else if (roll < 0.75) {
-        this.spawnDoubleCluster();
+      } else if (roll < 0.65) {
+        this.spawnDoublePack();
+      } else if (roll < 0.85) {
+        this.spawnGroundObstacle("ground_med");
       } else {
         this.spawnGroundObstacle("ground_tall");
       }
@@ -725,24 +948,19 @@ class RunnerScene extends Phaser.Scene {
     }
   }
 
-  private spawnDoubleCluster() {
+  // Double pack: 2 small paper stacks spawned synchronously side-by-side (cleared together in 1 leap)
+  private spawnDoublePack() {
     if (this.stats.status !== "playing") return;
-    this.spawnGroundObstacle("ground_low");
-    const speed = this.currentSpeed();
-    const delayMs = Phaser.Math.Clamp(360 / (speed / 260), 220, 360);
-    this.time.delayedCall(delayMs, () => {
-      if (this.stats.status === "playing") {
-        this.spawnGroundObstacle("ground_low");
-      }
-    });
+    this.spawnGroundObstacle("ground_low", 0);
+    this.spawnGroundObstacle("ground_low", 38);
   }
 
-  private spawnGroundObstacle(category: "ground_low" | "ground_med" | "ground_tall") {
+  private spawnGroundObstacle(category: "ground_low" | "ground_med" | "ground_tall", offsetX = 0) {
     if (this.stats.status !== "playing") return;
 
     const obstacle = this.nextGroundObstacle(category);
     const speed = this.currentSpeed();
-    const x = this.scale.width + Phaser.Math.Between(30, 70);
+    const x = this.scale.width + 40 + offsetX;
 
     const isMinistry = obstacle.lloj === "ministri";
     const isPodium = obstacle.lloj === "podium";
@@ -868,16 +1086,39 @@ class RunnerScene extends Phaser.Scene {
       });
     }
 
+    let stampText: string | undefined;
+    if ("titull" in target) {
+      if (target.titull.includes("Incinerator")) stampText = "PLEHRA IMAGJINARE!";
+      else if (target.titull.includes("5D")) stampText = "TENDERAT VETES!";
+      else if (target.titull.includes("Sterilizim")) stampText = "GËRSHËRË FLORIRI!";
+      else if (target.titull.includes("Porti")) stampText = "JAHTE JO PORT!";
+      else if (target.titull.includes("Check-Up")) stampText = "ANALIZA FIKTIVE!";
+      else if (target.titull.includes("Patronazh")) stampText = "SPIUN DIXHITAL!";
+      else if (target.titull.includes("Steak")) stampText = "DARKË ME TAKSA!";
+      else if (target.titull.includes("Kulla")) stampText = "KULLË BETONI!";
+    } else if ("emri" in target) {
+      if (target.emri.includes("Tigri")) stampText = "TIGRI N'ARRATI!";
+      else if (target.emri.includes("5D")) stampText = "TENDERAT VETES!";
+      else if (target.emri.includes("Sterilizim")) stampText = "GËRSHËRË FLORIRI!";
+      else if (target.emri.includes("Patronazhist")) stampText = "SPIUN DIXHITAL!";
+      else if (target.emri.includes("Kafe")) stampText = "KAFE 500 LEKË!";
+      else if (target.emri.includes("Syze")) stampText = "VILË NË ZVICËR!";
+      else if (target.emri.includes("Çantës")) stampText = "ÇANTA 8 RROGA!";
+      else if (target.emri.includes("Bosh")) stampText = "SALLA BOSH!";
+    }
+
     const isAntagonist = "antagonist" in target && (target.antagonist === "edi" || target.antagonist === "sali");
 
     if (isAntagonist) {
+      const antagonistType = (target as PersonObstacle).antagonist!;
       // PRISON CAGING ANIMATION
       soundManager.playJailLock();
       soundManager.playShredStamp();
+      triggerHaptic([30, 40, 30]); // Crisp double-tap on prison slam
       this.emitPaperShreds(collectible.x, collectible.y, 18);
-      this.spawnPrisonCage(collectible.x, collectible.y, target.antagonist!);
+      this.spawnPrisonCage(collectible.x, collectible.y, antagonistType);
 
-      if (target.antagonist === "edi") {
+      if (antagonistType === "edi") {
         this.cagedEdi = true;
         this.slamRubberStamp(collectible.x, collectible.y, "RAMA N'BURG!");
       } else {
@@ -891,13 +1132,15 @@ class RunnerScene extends Phaser.Scene {
       // Check if both have been caged in this run
       if (this.cagedEdi && this.cagedSali) {
         soundManager.playWin();
+        triggerHaptic([40, 30, 40, 30, 60]);
         this.showBreakingNews("🏛️ SPAK: EDI DHE SALI U FUTËN NË BURG! RNBNB! (+1000 Pikë)");
       }
     } else {
       // SHRED THE PROPAGANDA: Paper-rip particles + Red Rubber-Stamp + Audio
       soundManager.playShredStamp();
+      triggerHaptic([30, 40, 30]); // Crisp double-tap on slogan shred
       this.emitPaperShreds(collectible.x, collectible.y, 16);
-      this.slamRubberStamp(collectible.x, collectible.y);
+      this.slamRubberStamp(collectible.x, collectible.y, stampText);
     }
 
     // Cleanly animate and destroy the collectible sprite
@@ -922,6 +1165,7 @@ class RunnerScene extends Phaser.Scene {
     // Milestone celebrations every 10 exposures without interrupting the run
     if (exposure % 10 === 0) {
       soundManager.playWin();
+      triggerHaptic([30, 30, 50]);
       this.emitSparkles(this.scale.width / 2, this.scale.height * 0.3, 22);
       const bonus = exposure * 50;
       this.showBreakingNews(`🔥 REVOLUCIONI PO RRITET: ${exposure} Zbulime! (+${bonus} Pikë)`);
@@ -951,10 +1195,7 @@ class RunnerScene extends Phaser.Scene {
     if (this.stats.lives > 1) {
       this.invulnerableUntil = this.time.now + 1400; // 1.4s invulnerability
       soundManager.playCrash();
-
-      if (typeof navigator !== "undefined" && navigator.vibrate) {
-        navigator.vibrate([60, 40, 60]);
-      }
+      triggerHaptic(80); // Heavy pulse (80ms) on stumble
 
       this.emitFeathers(this.player.x, this.player.y, 8);
       this.cameras.main.shake(120, 0.01);
@@ -1004,9 +1245,7 @@ class RunnerScene extends Phaser.Scene {
     // FATAL HIT (lives <= 1)
     this.invulnerableUntil = this.time.now + INVULNERABLE_MS;
     soundManager.playCrash();
-    if (typeof navigator !== "undefined" && navigator.vibrate) {
-      navigator.vibrate([40, 30, 90]);
-    }
+    triggerHaptic([50, 40, 90]);
 
     // Burst feathers
     this.emitFeathers(this.player.x, this.player.y, 16);
@@ -1096,6 +1335,15 @@ class RunnerScene extends Phaser.Scene {
     this.cagedEdi = false;
     this.cagedSali = false;
     this.endBossChase(false);
+
+    this.sceneryGroup?.getChildren().forEach((child) => {
+      const bindingText = child.getData("bindingText") as Phaser.GameObjects.Text | undefined;
+      bindingText?.destroy();
+    });
+    this.sceneryGroup?.clear(true, true);
+    this.nextSceneryAt = 0;
+    this.nextGraffitiAt = 0;
+    this.nextNewsTickerAt = 10000;
 
     this.cameras.main.setBackgroundColor(this.level.skyColor);
     this.cityBack?.clearTint();
