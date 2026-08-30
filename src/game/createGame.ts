@@ -20,8 +20,8 @@ const PLAYER_DISPLAY_WIDTH = 46;
 const PLAYER_DISPLAY_HEIGHT = 66;
 const GROUND_HEIGHT = 72;
 const INVULNERABLE_MS = 650;
-const SPEED_RAMP_RATE = 0.011;
-const SPEED_RAMP_MAX = 2.0;
+const SPEED_RAMP_RATE = 0.013;
+const SPEED_RAMP_MAX = 2.2;
 const DISTANCE_TICK_MS = 120;
 const RUN_FRAME_MS = 120;
 const JUMP_BUFFER_MS = 140;
@@ -205,7 +205,10 @@ class RunnerScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.UP,
     ]);
 
-    this.input.on("pointerdown", () => this.requestJump());
+    this.input.on("pointerdown", () => {
+      soundManager.resumeIfSuspended();
+      this.requestJump();
+    });
     this.input.on("pointerup", () => this.releaseJump());
     window.addEventListener(GAME_COMMAND_EVENT, this.handleCommand);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -620,7 +623,7 @@ class RunnerScene extends Phaser.Scene {
     this.player.setVelocityY(this.player.body.velocity.y * JUMP_CUT_MULTIPLIER);
   }
 
-  // --- OBSTACLE DIRECTOR (Smooth First 40s Curve) ---
+  // --- OBSTACLE DIRECTOR (Continuous Multi-Tier Scaling) ---
   private scheduleObstacleDirector(overrideDelay?: number) {
     if (this.stats.status !== "playing") return;
 
@@ -628,17 +631,27 @@ class RunnerScene extends Phaser.Scene {
     let nextDelay = overrideDelay;
 
     if (!nextDelay) {
-      if (elapsedSeconds < 15) {
-        // 0-15s: Warmup, generous breathing room between low hurdles
+      if (elapsedSeconds < 18) {
+        // 0-18s: Warmup, generous breathing room (1650ms - 2150ms)
         nextDelay = Phaser.Math.Between(1650, 2150);
       } else if (elapsedSeconds < 40) {
-        // 15-40s: Comfortable gentle pacing
-        nextDelay = Phaser.Math.Between(1400, 1800);
+        // 18-40s: Steady building pace (1350ms - 1750ms)
+        nextDelay = Phaser.Math.Between(1350, 1750);
+      } else if (elapsedSeconds < 70) {
+        // 40-70s (The Middle / Night Phase): Noticeably tighter spacing (850ms - 1250ms)
+        const baseDelay = 1250 / this.currentSpeedMultiplier();
+        const jitter = Phaser.Math.Between(-140, 160);
+        nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 850, 1250);
+      } else if (elapsedSeconds < 100) {
+        // 70-100s (High Intensity): Fast reaction cadence (680ms - 980ms)
+        const baseDelay = 1050 / this.currentSpeedMultiplier();
+        const jitter = Phaser.Math.Between(-120, 140);
+        nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 680, 980);
       } else {
-        // 40s+: Progressive arcade challenge scaling with speed
-        const baseDelay = this.level.obstacleDelayMs / this.currentSpeedMultiplier();
-        const jitter = Phaser.Math.Between(-160, 200);
-        nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 800, 1350);
+        // 100s+ (Master Rush): Rapid arcade fire (540ms - 800ms)
+        const baseDelay = 850 / this.currentSpeedMultiplier();
+        const jitter = Phaser.Math.Between(-100, 120);
+        nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 540, 800);
       }
     }
 
@@ -657,45 +670,52 @@ class RunnerScene extends Phaser.Scene {
 
     const elapsedSeconds = (this.time.now - this.roundStartAt) / 1000;
 
-    if (elapsedSeconds < 15) {
-      // 0-15s: Only easy ground hurdles (papers)
+    if (elapsedSeconds < 18) {
+      // 0-18s: Only easy ground hurdles (papers)
       this.spawnGroundObstacle("ground_low");
-    } else if (elapsedSeconds < 30) {
-      // 15-30s: Mostly papers and podiums, rare ministry
+    } else if (elapsedSeconds < 35) {
+      // 18-35s: Mostly papers and podiums, rare ministry
       const roll = Math.random();
-      if (roll < 0.55) {
+      if (roll < 0.52) {
         this.spawnGroundObstacle("ground_low");
-      } else if (roll < 0.85) {
+      } else if (roll < 0.82) {
         this.spawnGroundObstacle("ground_med");
       } else {
         this.spawnGroundObstacle("ground_tall");
       }
-    } else if (elapsedSeconds < 40) {
-      // 30-40s: Balanced mix, air hazards introduced at low frequency
+    } else if (elapsedSeconds < 65) {
+      // 35-65s (The Middle / Night Phase): Balanced mix with 32% air hazards + 22% double paper clusters!
       const roll = Math.random();
-      if (roll < 0.22 && this.lastSpawnCategory !== "ground_tall") {
+      if (roll < 0.32 && this.lastSpawnCategory !== "ground_tall") {
         this.spawnAirHazard();
-      } else if (roll < 0.60) {
-        this.spawnGroundObstacle("ground_low");
+      } else if (roll < 0.54) {
+        this.spawnDoubleCluster();
+      } else if (roll < 0.76) {
+        this.spawnGroundObstacle("ground_med");
+      } else {
+        this.spawnGroundObstacle("ground_tall");
+      }
+    } else if (elapsedSeconds < 100) {
+      // 65-100s (High Intensity): 38% air hazards + 35% double clusters + tall ministries!
+      const roll = Math.random();
+      if (roll < 0.38 && this.lastSpawnCategory !== "ground_tall") {
+        this.spawnAirHazard();
+      } else if (roll < 0.68) {
+        this.spawnDoubleCluster();
       } else if (roll < 0.85) {
         this.spawnGroundObstacle("ground_med");
       } else {
         this.spawnGroundObstacle("ground_tall");
       }
     } else {
-      // 40s+: Full pressure phase
+      // 100s+ (Master Zone): Continuous relentless variety!
       const roll = Math.random();
-      if (roll < 0.30 && this.lastSpawnCategory !== "ground_tall") {
+      if (roll < 0.42 && this.lastSpawnCategory !== "ground_tall") {
         this.spawnAirHazard();
+      } else if (roll < 0.75) {
+        this.spawnDoubleCluster();
       } else {
-        const groundRoll = Math.random();
-        if (groundRoll < 0.40) {
-          this.spawnGroundObstacle("ground_low");
-        } else if (groundRoll < 0.75) {
-          this.spawnGroundObstacle("ground_med");
-        } else {
-          this.spawnGroundObstacle("ground_tall");
-        }
+        this.spawnGroundObstacle("ground_tall");
       }
     }
 
@@ -703,6 +723,18 @@ class RunnerScene extends Phaser.Scene {
     if (Math.random() < 0.40) {
       this.spawnCollectibleSafeArc();
     }
+  }
+
+  private spawnDoubleCluster() {
+    if (this.stats.status !== "playing") return;
+    this.spawnGroundObstacle("ground_low");
+    const speed = this.currentSpeed();
+    const delayMs = Phaser.Math.Clamp(360 / (speed / 260), 220, 360);
+    this.time.delayedCall(delayMs, () => {
+      if (this.stats.status === "playing") {
+        this.spawnGroundObstacle("ground_low");
+      }
+    });
   }
 
   private spawnGroundObstacle(category: "ground_low" | "ground_med" | "ground_tall") {
@@ -1604,10 +1636,28 @@ export function createGame(parent: HTMLElement, levelId: string, callbacks: Game
     parent,
     width: parent.clientWidth || window.innerWidth,
     height: parent.clientHeight || window.innerHeight,
-    pixelArt: false,
+    roundPixels: true,
+    render: {
+      pixelArt: false,
+      antialias: true,
+      powerPreference: "high-performance",
+      desynchronized: true,
+    },
+    fps: {
+      target: 60,
+      min: 30,
+      forceSetTimeOut: false,
+      smoothStep: true,
+    },
     scale: {
       mode: Phaser.Scale.RESIZE,
       autoCenter: Phaser.Scale.CENTER_BOTH,
+    },
+    input: {
+      activePointers: 2,
+      touch: {
+        capture: true,
+      },
     },
     physics: {
       default: "arcade",

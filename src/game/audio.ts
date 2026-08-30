@@ -49,6 +49,14 @@ class SoundManager {
     return this.isMuted;
   }
 
+  public resumeIfSuspended() {
+    if (this.isMuted) return;
+    const ctx = this.getContext();
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+  }
+
   public playJump() {
     if (this.isMuted) return;
     const ctx = this.getContext();
