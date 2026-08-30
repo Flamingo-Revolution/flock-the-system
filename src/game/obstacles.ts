@@ -16,10 +16,31 @@ export type MinistryObstacle = {
   emri: string;
 };
 
+export type GroundObstacle = {
+  lloj: "ministri" | "letra" | "podium";
+  emri: string;
+  texture: "ministri" | "leter-1" | "leter-2" | "leter-3" | "podium";
+};
+
+export type AirHazard = {
+  lloj: "dron" | "mikrofon" | "kamera";
+  emri: string;
+  texture: "dron" | "mikrofon" | "kamera";
+};
+
+export type DocumentCollectible = {
+  titull: string;
+  eVerteta: string;
+  pike: number;
+};
+
 export type ObstaclePool = {
   slogane: SloganObstacle[];
   njerez: PersonObstacle[];
   ministri: MinistryObstacle[];
+  pengesaToke: GroundObstacle[];
+  rreziqeAjri: AirHazard[];
+  dokumente: DocumentCollectible[];
 };
 
 /*
@@ -29,6 +50,9 @@ export type ObstaclePool = {
  * - slogane qe lojtari i zbulon ne ajer
  * - njerez/personazhe qe lojtari i kap per pike
  * - ministri qe dalin si pengesa ne toke
+ * - pengesaToke: ministri, letra, podiume
+ * - rreziqeAjri: drone, mikrofona, kamera
+ * - dokumente qe japin pike si koleksione
  *
  * Keshille: mbaji tekstet te shkurtra. Shenjat shfaqen ne telefon.
  */
@@ -164,6 +188,28 @@ export const pengesatQytetiISloganeve: ObstaclePool = {
     { emri: "Ministria e Strategjise se Neserme" },
     { emri: "Ministria e Transparences me Fjalekalim" },
   ],
+  pengesaToke: [
+    { lloj: "ministri", emri: "Ministria e Premtimeve te Pafundme", texture: "ministri" },
+    { lloj: "ministri", emri: "Ministria e Shiriteve te Kuq", texture: "ministri" },
+    { lloj: "letra", emri: "Dosja qe do vetem nje firme tjeter", texture: "leter-1" },
+    { lloj: "letra", emri: "Formulari 17B me tre shtojca", texture: "leter-2" },
+    { lloj: "letra", emri: "Procesverbali qe humbi ne printer", texture: "leter-3" },
+    { lloj: "podium", emri: "Podiumi i fjaleve te medha", texture: "podium" },
+    { lloj: "podium", emri: "Konferenca per punen qe s'ka nisur", texture: "podium" },
+  ],
+  rreziqeAjri: [
+    { lloj: "dron", emri: "Droni i ceremonive", texture: "dron" },
+    { lloj: "mikrofon", emri: "Mikrofoni pa pergjigje", texture: "mikrofon" },
+    { lloj: "kamera", emri: "Kamera qe zgjedh kendin", texture: "kamera" },
+    { lloj: "dron", emri: "Droni me bateri tenderi", texture: "dron" },
+    { lloj: "kamera", emri: "Kamera e fasades", texture: "kamera" },
+  ],
+  dokumente: [
+    { titull: "Fatura e harruar", eVerteta: "nuk ishte falas", pike: 24 },
+    { titull: "Aneksi sekret", eVerteta: "ishte publik vetem per miq", pike: 26 },
+    { titull: "Lista e fituesve", eVerteta: "u shkrua para konkursit", pike: 28 },
+    { titull: "Raporti final", eVerteta: "copy paste me logo te re", pike: 25 },
+  ],
 };
 
 export const pengesatLagjjaEEkraneve: ObstaclePool = {
@@ -295,5 +341,27 @@ export const pengesatLagjjaEEkraneve: ObstaclePool = {
     { emri: "Ministria e Heshtjes me Zhurme" },
     { emri: "Ministria e Transmetimit te Prere" },
     { emri: "Ministria e Klikimeve Patriotike" },
+  ],
+  pengesaToke: [
+    { lloj: "ministri", emri: "Ministria e Ekraneve te Medha", texture: "ministri" },
+    { lloj: "ministri", emri: "Ministria e Titujve qe Bertasin", texture: "ministri" },
+    { lloj: "letra", emri: "Sondazhi me kampion familjar", texture: "leter-1" },
+    { lloj: "letra", emri: "Transkripti me pyetje te prera", texture: "leter-2" },
+    { lloj: "letra", emri: "Njoftimi i korrigjuar kater here", texture: "leter-3" },
+    { lloj: "podium", emri: "Podiumi i panelit neutral", texture: "podium" },
+    { lloj: "podium", emri: "Fjalimi pas reklames", texture: "podium" },
+  ],
+  rreziqeAjri: [
+    { lloj: "dron", emri: "Droni LIVE nga studio", texture: "dron" },
+    { lloj: "mikrofon", emri: "Mikrofoni qe nderpret", texture: "mikrofon" },
+    { lloj: "kamera", emri: "Kamera e zoom-it dramatik", texture: "kamera" },
+    { lloj: "mikrofon", emri: "Mikrofoni i pyetjes se miratuar", texture: "mikrofon" },
+    { lloj: "kamera", emri: "Kamera e titullit gjigant", texture: "kamera" },
+  ],
+  dokumente: [
+    { titull: "Burimi anonim", eVerteta: "ishte nje screenshot", pike: 24 },
+    { titull: "Kontrata e reklamave", eVerteta: "opinion me sponsor", pike: 27 },
+    { titull: "Grafiku pa bosht", eVerteta: "vija shkonte ku donte", pike: 25 },
+    { titull: "Script-i i panelit", eVerteta: "debat me radhe fjalesh", pike: 29 },
   ],
 };

@@ -16,4 +16,4 @@ export type GameCallbacks = {
 
 export type GameCommand = "start" | "pause" | "restart";
 
-export const GAME_COMMAND_EVENT = "flock-the-system:command";
+export const GAME_COMMAND_EVENT = "flamingoja-e-fundit:command";

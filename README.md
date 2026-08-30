@@ -1,6 +1,6 @@
-# Flock the System
+# Flamingoja e Fundit
 
-**Flock the System** is a frontend-only 2D satirical platformer about a rebellious flamingo flying over a propaganda-soaked version of Albania and exposing the machinery behind public deception.
+**Flamingoja e Fundit** is a frontend-only 2D satirical platformer about a rebellious flamingo flying over a propaganda-soaked version of Albania and exposing the machinery behind public deception.
 
 The game is planned as a modular beta first: one playable experience, built in a way that makes it easy to add new stages, Albanian ministries, buildings, political caricatures, objectives, and satire targets later.
 
@@ -28,7 +28,7 @@ Current gameplay rules are documented in [`RULES.md`](RULES.md).
 
 A pink flamingo flies across an exaggerated Albanian city where propaganda is everywhere: billboards, ministries, media towers, fake construction sites, loudspeakers, surveillance drones, and staged public ceremonies.
 
-The flamingo drops messy projectiles onto buildings, objects, and machines. When propaganda objects are hit, their polished surface breaks and reveals the contradiction underneath: broken promises, fake progress, inflated numbers, empty reforms, unfinished projects, or absurd slogans.
+The current prototype is a fullscreen mobile T-Rex-style runner: the scene scrolls, the player taps to jump, avoids ground and air hazards, and collects slogans, people, and documents that reveal the contradiction underneath: broken promises, fake progress, inflated numbers, empty reforms, unfinished projects, or absurd slogans.
 
 The goal is not to attack real people. The goal is to make a playable satire about propaganda, corruption, media manipulation, public spectacle, and institutional absurdity.
 
@@ -52,10 +52,10 @@ The first beta should stay small but expandable.
 The beta should include:
 
 - A playable flamingo character
-- Flight, glide, movement, and drop mechanics
+- T-Rex-style tap-to-jump movement tuned for mobile screens
 - At least one complete level
 - A basic level select screen
-- Destructible propaganda objects
+- Collectible propaganda reveals
 - Albanian ministry-themed buildings
 - At least one politician-style caricature as a mini-boss or hazard
 - Score, combos, objectives, and level completion
@@ -68,9 +68,9 @@ The beta should not try to include every idea at once. The priority is to prove 
 
 1. Choose a stage.
 2. Fly through the level as the flamingo.
-3. Avoid hazards such as drones, spotlights, megaphone waves, and bureaucratic traps.
-4. Drop projectiles onto propaganda targets.
-5. Break the surface layer of objects to reveal what is hidden underneath.
+3. Avoid hazards such as drones, microphones, cameras, ministries, papers, podiums, and bureaucratic traps.
+4. Jump into slogans, people, and documents when they are safely reachable.
+5. Reveal what is hidden underneath each polished public message.
 6. Build score through combos, precision hits, and objective completion.
 7. Complete the stage by exposing enough propaganda or defeating the stage boss.
 
@@ -426,7 +426,7 @@ Static deployment options:
 
 When adding new content:
 
-- Keep names and text in English for now.
+- Keep visible names and text in Albanian.
 - Keep the setting and institutional satire rooted in Albania.
 - Prefer fictional ministry and politician names unless the project explicitly decides otherwise.
 - Add content through data files when possible.

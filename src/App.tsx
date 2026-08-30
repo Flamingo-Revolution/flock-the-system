@@ -4,8 +4,8 @@ import { GAME_COMMAND_EVENT, type GameCommand, type GameStats } from "./game/eve
 import { getLevel, levels } from "./game/levels";
 import "./styles.css";
 
-const BEST_SCORE_KEY = "flock-the-system-best-score";
-const COMPLETED_LEVELS_KEY = "flock-the-system-completed-levels";
+const BEST_SCORE_KEY = "flamingoja-e-fundit-best-score";
+const COMPLETED_LEVELS_KEY = "flamingoja-e-fundit-completed-levels";
 const DEFAULT_LEVEL_ID = levels[0].id;
 
 function readCompletedLevels() {
@@ -29,7 +29,7 @@ export default function App() {
     levelName: selectedLevel.name,
     score: 0,
     exposure: 0,
-    lives: 3,
+    lives: 1,
     combo: 1,
     status: "ready",
     message: selectedLevel.intro,
@@ -91,7 +91,7 @@ export default function App() {
 
       <header className={stats.status === "playing" ? "hud compact" : "hud"}>
         <div className="brand">
-          <p className="eyebrow">Tufa kunder Sistemit</p>
+          <p className="eyebrow">Flamingoja e Fundit</p>
           <h1>{stats.levelName}</h1>
         </div>
         <dl className="stats">
@@ -112,10 +112,6 @@ export default function App() {
           <div>
             <dt>Seri</dt>
             <dd>x{stats.combo}</dd>
-          </div>
-          <div>
-            <dt>Jete</dt>
-            <dd>{stats.lives}</dd>
           </div>
         </dl>
       </header>

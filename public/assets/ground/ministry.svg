@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 92">
+  <!-- base steps -->
+  <rect x="4" y="70" width="56" height="4" fill="#1d2730"/>
+
+  <!-- side wings -->
+  <rect x="4" y="32" width="18" height="54" fill="#d97a4a"/>
+  <rect x="42" y="32" width="18" height="54" fill="#d97a4a"/>
+  <!-- wing cornice -->
+  <rect x="3" y="30" width="20" height="3" fill="#9c4f2b"/>
+  <rect x="41" y="30" width="20" height="3" fill="#9c4f2b"/>
+
+  <!-- central projecting block -->
+  <rect x="19" y="22" width="26" height="64" fill="#eab04a"/>
+  <!-- central entablature -->
+  <rect x="17" y="20" width="30" height="4" fill="#9c4f2b"/>
+  <!-- central pediment (triangle) -->
+  <path d="M20 20 32 9 44 20Z" fill="#d97a4a"/>
+
+  <!-- columns on central block -->
+  <g fill="#f6d488">
+    <rect x="21" y="24" width="3.2" height="22"/>
+    <rect x="30.4" y="24" width="3.2" height="22"/>
+    <rect x="39.8" y="24" width="3.2" height="22"/>
+  </g>
+
+  <!-- windows: side wings, upper row -->
+  <g fill="#4a2f22">
+    <rect x="7" y="38" width="4.5" height="6.5"/>
+    <rect x="13.5" y="38" width="4.5" height="6.5"/>
+    <rect x="46" y="38" width="4.5" height="6.5"/>
+    <rect x="52.5" y="38" width="4.5" height="6.5"/>
+  </g>
+  <!-- windows: side wings, lower row -->
+  <g fill="#4a2f22">
+    <rect x="7" y="60" width="4.5" height="7.5"/>
+    <rect x="13.5" y="60" width="4.5" height="7.5"/>
+    <rect x="46" y="60" width="4.5" height="7.5"/>
+    <rect x="52.5" y="60" width="4.5" height="7.5"/>
+  </g>
+  <!-- small ground-floor windows on wings -->
+  <g fill="#4a2f22">
+    <rect x="8" y="78" width="4" height="4"/>
+    <rect x="52" y="78" width="4" height="4"/>
+  </g>
+
+  <!-- central windows between columns -->
+  <g fill="#4a2f22">
+    <rect x="25.2" y="28" width="4" height="9"/>
+    <rect x="34.8" y="28" width="4" height="9"/>
+  </g>
+  <!-- central entrance -->
+  <path d="M28.5 84v-9c0-2 1.5-3.5 3.5-3.5s3.5 1.5 3.5 3.5v9Z" fill="#4a2f22"/>
+  <!-- steps to entrance -->
+  <rect x="27" y="84" width="10" height="2" fill="#1d2730"/>
+
+  <!-- simplified crest badge above roofline -->
+  <g fill="#2f4050">
+    <circle cx="32" cy="3" r="1.3"/>
+    <path d="M32 4.5c-3 0-5.5 1.8-6.5 4.3 1.8-1 3.4-1.2 4.6-.6-.3.9-.1 1.7.6 2.3.5-1.1 1.1-1.7 1.9-1.9.8.2 1.4.8 1.9 1.9.7-.6.9-1.4.6-2.3 1.2-.6 2.8-.4 4.6.6-1-2.5-3.5-4.3-6.5-4.3-.4 0-.8-.1-1.2 0-.4-.1-.8 0-1.2 0Z"/>
+  </g>
+</svg>

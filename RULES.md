@@ -1,59 +1,81 @@
-# Rregullat e Lojës
+# Rregullat e Lojes
 
 ## Mekanika Kryesore
 
-Loja është mobile-first dhe luhet me prekje.
+Loja eshte mobile-first dhe luhet me prekje, ne stilin T-Rex Runner.
 
-- Prek ekranin për ta ngritur flamingon.
-- Skena lëviz automatikisht nga e djathta në të majtë.
-- Flamingoja nuk ecën majtas-djathtas; lojtari kontrollon vetëm ngritjen.
-- Nëse nuk prek ekranin, graviteti e ul flamingon poshtë.
-- Përplasja me shtyllat e propagandës ose tokën heq një jetë.
-- Kur mbarojnë jetët, raundi ndalet dhe mund të riniset me prekje ose me butonin `Rinis`.
+- Prek ekranin per ta bere flamingon te kerceje.
+- Prekja ruhet per pak caste para uljes, qe kercimi te ndihet i drejte ne telefon.
+- Skena leviz automatikisht nga e djathta ne te majte.
+- Flamingoja vrapon ne toke dhe ka vetem nje kercim ne ajer.
+- Nese nuk prek ekranin, flamingoja vazhdon te vrapoje ne toke.
+- Perplasja me pengesa toke ose rreziqe ajri e mbyll raundin.
+- Pas perplasjes, raundi mund te riniset me prekje ose me butonin `Rinis`.
 
 ## Objektivi
 
-Lojtari duhet të kalojë mes pengesave dhe të mbledhë shenjat e zbulimit.
+Lojtari duhet te vrapoje, te kerceje mbi pengesa dhe te mbledhe objektivat satirike.
 
-- Çdo shenjë ka një slogan publik dhe një të vërtetë të fshehur.
-- Kur flamingoja prek shenjën, slogani zbulohet dhe lojtari merr pikë.
-- Sa më shumë shenja të merren radhazi, aq më e lartë bëhet seria.
-- Nëse një shenjë kalon pa u marrë, seria kthehet në `x1`.
-- Faza kalohet kur arrihet numri i kërkuar i zbulimeve.
+- Shenjat kane nje slogan publik dhe nje te vertete te fshehur.
+- Njerezit jane karikatura fiktive qe japin pike kur kapen.
+- Dokumentet zbulojne prova/parodi dhe japin pike.
+- Kur flamingoja prek nje objektiv, teksti zbulohet dhe lojtari merr pike.
+- Sa me shume objektiva te merren radhazi, aq me e larte behet seria.
+- Nese nje objektiv kalon pa u marre, seria kthehet ne `x1`.
+- Faza kalohet kur arrihet numri i kerkuar i zbulimeve.
+- Gjate vrapimit, pengesat qendrojne vizualisht te pastra; batutat shfaqen ne zbulime dhe ne perplasje.
+
+## Llojet e Pengesave
+
+Pengesat ndahen qarte sipas pozicionit dhe sjelljes.
+
+- `pengesaToke`: ministri, letra, podiume.
+- `rreziqeAjri`: drone, mikrofona, kamera.
+- `slogane`: shenja/parulla qe mblidhen ne ajer.
+- `njerez`: karikatura/personazhe fiktive qe mblidhen per pike.
+- `dokumente`: dosje, fatura, raporte dhe prova satirike.
+
+Te gjitha listat redaktohen te `src/game/obstacles.ts`. Mund te shtosh sa te duash elemente; loja i merr me radhe dhe pastaj i perserit.
+
+Rreziqet e ajrit hapen me vone ne raund, pasi ritmi baze i kercimeve eshte vendosur.
+
+## Asetet
+
+Asetet reale te lojes ruhen ne `public/assets/`.
+
+- `public/assets/background/`: silueta e Tiranes dhe sfondet.
+- `public/assets/characters/`: flamingoja dhe animimet baze.
+- `public/assets/obstacles/`: pengesat kryesore.
+- `public/assets/ground/`: ministri, letra, podiume, toka.
+- `public/assets/hazards/`: drone, mikrofona, kamera.
+- `public/assets/collectibles/`: shenja, dokumente, njerez.
+
+Keto SVG/PNG mund te zevendesohen me art final pa ndryshuar logjiken e lojes, per sa kohe ruhen emrat ose perditesohet `createGame.ts`.
 
 ## Kontrollet
 
-- Mobile: prekje në ekran.
-- Tastierë: `Space` ose `Enter` për fluturim.
-- `P`: pauzë / vazhdo.
-- `R`: rinis fazën.
+- Mobile: prekje ne ekran per kercim.
+- Tastiere: `Space` ose `Enter` per kercim.
+- `P`: pauze / vazhdo.
+- `R`: rinis fazen.
 
-## Gjuha dhe Emërtimet
+## Gjuha dhe Emertimet
 
-Të gjitha tekstet e dukshme në lojë duhet të jenë në shqip.
+Te gjitha tekstet e dukshme ne loje duhet te jene ne shqip.
 
-- Emrat e fazave në shqip.
-- Mesazhet e statusit në shqip.
-- Sloganet dhe zbulimet në shqip.
-- Butonat dhe statistikat në shqip.
+- Emrat e fazave ne shqip.
+- Mesazhet e statusit ne shqip.
+- Sloganet dhe zbulimet ne shqip.
+- Butonat dhe statistikat ne shqip.
+- Ministrite, personazhet, dokumentet dhe rreziqet ne shqip.
 
-Kodi mund të përdorë emra teknikë në anglisht kur kjo e bën mirëmbajtjen më të qartë, por përvoja e lojtarit duhet të jetë shqip.
+Kodi mund te perdore emra teknike ne anglisht kur kjo e ben mirembajtjen me te qarte, por pervoja e lojtarit duhet te jete shqip.
 
-## Lista e Pengesave
+## Kufijte e Permbajtjes
 
-Pengesat dhe objektivat shtohen te `src/game/obstacles.ts`.
+Loja eshte satire politike dhe institucionale.
 
-- `slogane`: shenja që lojtari mbledh për të zbuluar të vërtetën.
-- `njerez`: personazhe/persona që shfaqen si objektiva në ajër.
-- `ministri`: ndërtesa ministrish që shfaqen si pengesa në tokë.
-
-Mund të shtosh sa të duash elemente në secilën listë. Loja i merr me radhë dhe pastaj i përsërit.
-
-## Kufijtë e Përmbajtjes
-
-Loja është satirë politike dhe institucionale.
-
-- Përdor emra fiktivë, role të përgjithshme dhe slogane parodike.
-- Mos përdor emra realë personash pa një vendim të qartë editorial.
-- Satira duhet të godasë propagandën, mashtrimin publik dhe absurditetin institucional.
-- Toni duhet të mbetet arcade, i shpejtë dhe i lexueshëm në telefon.
+- Perdor emra fiktive, role te pergjithshme dhe slogane parodike.
+- Mos perdor emra reale personash pa nje vendim te qarte editorial.
+- Satira duhet te godase propaganden, mashtrimin publik dhe absurditetin institucional.
+- Toni duhet te mbetet arcade, i shpejte dhe i lexueshem ne telefon.
