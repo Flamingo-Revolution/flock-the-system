@@ -10,6 +10,7 @@ export type PersonObstacle = {
   thirrje: string;
   eVerteta: string;
   pike: number;
+  antagonist?: "edi" | "sali";
 };
 
 export type MinistryObstacle = {
@@ -19,7 +20,8 @@ export type MinistryObstacle = {
 export type GroundObstacle = {
   lloj: "ministri" | "letra" | "podium";
   emri: string;
-  texture: "ministri" | "leter-1" | "leter-2" | "leter-3" | "podium";
+  texture: "ministri" | "leter-1" | "leter-2" | "leter-3" | "podium" | "edi-character" | "sali-character";
+  antagonist?: "edi" | "sali";
 };
 
 export type AirHazard = {
@@ -85,6 +87,23 @@ export const sheshiIRevolucionitPool: ObstaclePool = {
   ],
 
   njerez: [
+    // The 2 Antagonists of the Revolution
+    {
+      emri: "Edi Rama",
+      roli: "Kryeministër i Fasadës",
+      thirrje: "S'KA PROTESTË, KA ERTV!",
+      eVerteta: "Rama n'burg!",
+      pike: 50,
+      antagonist: "edi",
+    },
+    {
+      emri: "Sali Berisha",
+      roli: "Lider i Ballkonit",
+      thirrje: "FOLTORE PA LIMIT!",
+      eVerteta: "Berisha n'burg!",
+      pike: 50,
+      antagonist: "sali",
+    },
     // MPs making fun of protesters & caricatures
     {
       emri: "Deputeti me Kafe",

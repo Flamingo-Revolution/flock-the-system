@@ -7,6 +7,7 @@ export type GameStats = {
   combo: number;
   status: "ready" | "playing" | "paused" | "won" | "lost";
   message: string;
+  lastHitAntagonist?: "edi" | "sali";
 };
 
 export type GameCallbacks = {

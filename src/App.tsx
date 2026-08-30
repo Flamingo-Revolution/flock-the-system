@@ -164,6 +164,30 @@ export default function App() {
             </h2>
             <p className="status-subtext">{stats.message}</p>
 
+            {stats.status === "lost" ? (
+              <div className="antagonist-cameo">
+                <img
+                  src={
+                    stats.lastHitAntagonist === "sali"
+                      ? `${import.meta.env.BASE_URL}assets/characters/sali_fullbody.svg`
+                      : `${import.meta.env.BASE_URL}assets/characters/edi_fullbody.svg`
+                  }
+                  alt="Antagonist"
+                  className="antagonist-thumb"
+                />
+                <div className="antagonist-speech">
+                  <span className="antagonist-name">
+                    {stats.lastHitAntagonist === "sali" ? "Sali Berisha" : "Edi Rama"}
+                  </span>
+                  <p className="antagonist-quote">
+                    {stats.lastHitAntagonist === "sali"
+                      ? "«Ky regjim ra, po re edhe ti o mik!»"
+                      : "«Ju thashë që ishin vetëm 12 veta në shesh...»"}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
             <div className="start-actions">
               <button type="button" className="primary-start" onClick={startGame}>
                 {stats.status === "lost"

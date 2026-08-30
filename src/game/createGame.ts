@@ -100,6 +100,11 @@ class RunnerScene extends Phaser.Scene {
   private isFrozen = false;
   private lastSpawnCategory: ObstacleCategory = "ground_low";
   private timePhase: "morning" | "sunset" | "night" = "morning";
+  private cagedEdi = false;
+  private cagedSali = false;
+  private bossChaseSprite?: Phaser.GameObjects.Image;
+  private bossChaseBubble?: Phaser.GameObjects.Text;
+  private bossChaseActive = false;
   private stats!: GameStats;
 
   private readonly handleCommand = (event: Event) => {
@@ -138,6 +143,14 @@ class RunnerScene extends Phaser.Scene {
     this.load.svg("flamingo-b", `${ASSET_BASE}characters/flamingo-b.svg`, {
       width: PLAYER_DISPLAY_WIDTH,
       height: PLAYER_DISPLAY_HEIGHT,
+    });
+    this.load.svg("edi-character", `${ASSET_BASE}characters/edi_fullbody.svg`, {
+      width: 52,
+      height: 78,
+    });
+    this.load.svg("sali-character", `${ASSET_BASE}characters/sali_fullbody.svg`, {
+      width: 52,
+      height: 78,
     });
     this.load.svg("toke", `${ASSET_BASE}ground/ground.svg`, { width: 240, height: 72 });
     this.load.svg("ministri", `${ASSET_BASE}ground/ministry.svg`, { width: 64, height: 92 });
@@ -267,6 +280,27 @@ class RunnerScene extends Phaser.Scene {
       p3.generateTexture("shred-red", 8, 3);
       p3.destroy();
     }
+
+    if (!this.textures.exists("prison-cage")) {
+      const cageGfx = this.make.graphics({ x: 0, y: 0 }, false);
+      // Dark semi-transparent cell background
+      cageGfx.fillStyle(0x10131d, 0.45);
+      cageGfx.fillRoundedRect(0, 0, 56, 78, 4);
+      // Outer steel frame
+      cageGfx.lineStyle(4, 0x1f2937, 1);
+      cageGfx.strokeRoundedRect(0, 0, 56, 78, 4);
+      // Top and bottom crossbars
+      cageGfx.lineStyle(3, 0x374151, 1);
+      cageGfx.lineBetween(0, 16, 56, 16);
+      cageGfx.lineBetween(0, 62, 56, 62);
+      // Vertical iron bars
+      cageGfx.lineStyle(3, 0x4b5563, 1);
+      for (let x = 10; x <= 48; x += 9) {
+        cageGfx.lineBetween(x, 0, x, 78);
+      }
+      cageGfx.generateTexture("prison-cage", 56, 78);
+      cageGfx.destroy();
+    }
   }
 
   update(time: number, delta: number) {
@@ -349,6 +383,16 @@ class RunnerScene extends Phaser.Scene {
     // Gentle hover animation for air hazards
     this.animateAirHazards(time);
 
+    // Update trailing boss chase position and float wobble
+    if (this.bossChaseActive && this.bossChaseSprite && this.bossChaseSprite.active) {
+      this.bossChaseSprite.x = Phaser.Math.Linear(this.bossChaseSprite.x, this.player.x - 56, 0.08);
+      this.bossChaseSprite.y = this.groundTop - 36 + Math.sin(time * 0.008) * 4;
+      if (this.bossChaseBubble && this.bossChaseBubble.active) {
+        this.bossChaseBubble.x = this.bossChaseSprite.x + 18;
+        this.bossChaseBubble.y = this.bossChaseSprite.y - 42;
+      }
+    }
+
     // Dynamic Day-to-Night Satirical Cycle
     this.updateDayNightCycle();
 
@@ -366,18 +410,77 @@ class RunnerScene extends Phaser.Scene {
       this.showBreakingNews("🚨 ALARM SHTETËROR: Flamingoja mori sheshin, propaganda dështoi!");
       this.transitionSkyColor(0x0f172a, 0x312e81, 0x4338ca);
       this.player.setTint(0xff4f8b);
+      this.startBossChase();
     } else if (cycleSeconds >= 20 && cycleSeconds < 40 && this.timePhase !== "sunset") {
       this.timePhase = "sunset";
       soundManager.playSiren();
       this.showBreakingNews("🚨 NJOFTIM: Deputetët kërkojnë të mos shikohen çadrat e protestës!");
       this.transitionSkyColor(0xe76f51, 0xff9e00, 0xffb703);
       this.player.clearTint();
+      this.endBossChase(false);
     } else if (cycleSeconds < 20 && this.timePhase !== "morning" && elapsedSeconds > 5) {
       this.timePhase = "morning";
       this.showBreakingNews("☀️ AGIMI I PROTESTËS: Sheshi mbushet sërish me qytetarë!");
       this.transitionSkyColor(0x93e4ef, 0xffffff, 0xffffff);
       this.player.clearTint();
+      this.endBossChase(false);
     }
+  }
+
+  private startBossChase() {
+    if (this.bossChaseActive || this.stats.status !== "playing") return;
+    this.bossChaseActive = true;
+
+    const antagonistKey = Math.random() < 0.5 ? "edi-character" : "sali-character";
+    const name = antagonistKey === "edi-character" ? "Edi Rama" : "Sali Berisha";
+    const quote = antagonistKey === "edi-character" ? "S'KA PROTESTË!" : "FOLTORE 24/7!";
+
+    this.showBreakingNews(`🚨 ALARM: ${name} po ndjek flamingon!`);
+
+    this.bossChaseSprite = this.add.image(-40, this.groundTop - 36, antagonistKey);
+    this.bossChaseSprite.setDisplaySize(44, 66);
+    this.bossChaseSprite.setDepth(DEPTH_OBSTACLE - 2);
+
+    this.bossChaseBubble = this.add
+      .text(10, this.groundTop - 78, `[ ${quote} ]`, {
+        color: "#ffd23f",
+        backgroundColor: "rgba(16,19,29,0.88)",
+        fontFamily: "Outfit, sans-serif",
+        fontSize: "10px",
+        fontStyle: "bold",
+        padding: { x: 6, y: 3 },
+      })
+      .setOrigin(0.5)
+      .setDepth(DEPTH_LABEL);
+
+    // Auto-end after 15 seconds if not repelled earlier
+    this.time.delayedCall(15000, () => {
+      this.endBossChase(false);
+    });
+  }
+
+  private endBossChase(repelled = false) {
+    if (!this.bossChaseActive || !this.bossChaseSprite) return;
+    this.bossChaseActive = false;
+
+    if (repelled) {
+      this.emitSparkles(this.bossChaseSprite.x, this.bossChaseSprite.y, 16);
+      this.showBreakingNews("💥 SHOKVALË REVOLUCIONARE: Regjimi u zmbraps!");
+    }
+
+    this.tweens.add({
+      targets: [this.bossChaseSprite, this.bossChaseBubble],
+      x: -140,
+      alpha: 0,
+      duration: 600,
+      ease: "Quad.easeIn",
+      onComplete: () => {
+        this.bossChaseSprite?.destroy();
+        this.bossChaseBubble?.destroy();
+        this.bossChaseSprite = undefined;
+        this.bossChaseBubble = undefined;
+      },
+    });
   }
 
   private transitionSkyColor(targetSky: number, backTint: number, frontTint: number) {
@@ -691,7 +794,11 @@ class RunnerScene extends Phaser.Scene {
     sprite.setData("collected", false);
     sprite.setData("collectedTexture", texture === "shenje" ? "shenje-zbuluar" : texture);
 
-    if (texture === "person") {
+    if (texture === "edi-character" || texture === "sali-character") {
+      sprite.setDisplaySize(44, 66);
+      sprite.body.setSize(32, 48);
+      this.addLabel(sprite, this.targetTitle(target), -34, 116);
+    } else if (texture === "person") {
       sprite.setDisplaySize(38, 46);
       sprite.body.setSize(28, 38);
       this.addLabel(sprite, this.targetTitle(target), -30, 108);
@@ -729,10 +836,37 @@ class RunnerScene extends Phaser.Scene {
       });
     }
 
-    // SHRED THE PROPAGANDA: Paper-rip particles + Red Rubber-Stamp + Audio
-    soundManager.playShredStamp();
-    this.emitPaperShreds(collectible.x, collectible.y, 16);
-    this.slamRubberStamp(collectible.x, collectible.y);
+    const isAntagonist = "antagonist" in target && (target.antagonist === "edi" || target.antagonist === "sali");
+
+    if (isAntagonist) {
+      // PRISON CAGING ANIMATION
+      soundManager.playJailLock();
+      soundManager.playShredStamp();
+      this.emitPaperShreds(collectible.x, collectible.y, 18);
+      this.spawnPrisonCage(collectible.x, collectible.y, target.antagonist!);
+
+      if (target.antagonist === "edi") {
+        this.cagedEdi = true;
+        this.slamRubberStamp(collectible.x, collectible.y, "RAMA N'BURG!");
+      } else {
+        this.cagedSali = true;
+        this.slamRubberStamp(collectible.x, collectible.y, "BERISHA N'BURG!");
+      }
+
+      // Repel boss chase if currently active
+      this.endBossChase(true);
+
+      // Check if both have been caged in this run
+      if (this.cagedEdi && this.cagedSali) {
+        soundManager.playWin();
+        this.showBreakingNews("🏛️ SPAK: EDI DHE SALI U FUTËN NË BURG! RNBNB! (+1000 Pikë)");
+      }
+    } else {
+      // SHRED THE PROPAGANDA: Paper-rip particles + Red Rubber-Stamp + Audio
+      soundManager.playShredStamp();
+      this.emitPaperShreds(collectible.x, collectible.y, 16);
+      this.slamRubberStamp(collectible.x, collectible.y);
+    }
 
     // Cleanly animate and destroy the collectible sprite
     this.tweens.add({
@@ -748,7 +882,7 @@ class RunnerScene extends Phaser.Scene {
 
     const combo = Math.min(this.stats.combo + 1, 5);
     const gained = target.pike * this.stats.combo;
-    const score = this.stats.score + gained;
+    const score = this.stats.score + gained + (isAntagonist && this.cagedEdi && this.cagedSali ? 1000 : 0);
     const exposure = this.stats.exposure + 1;
 
     // Sparkles & Floating Score
@@ -850,11 +984,16 @@ class RunnerScene extends Phaser.Scene {
     this.player.setTint(0xff4f8b);
     this.cameras.main.shake(160, 0.015);
 
+    const isEdi = obstacleLabel?.includes("Rama") || obstacle?.texture.key === "edi-character";
+    const isSali = obstacleLabel?.includes("Berisha") || obstacle?.texture.key === "sali-character";
+    const lastHitAntagonist: "edi" | "sali" | undefined = isEdi ? "edi" : isSali ? "sali" : undefined;
+
     this.time.delayedCall(90, () => {
       this.isFrozen = false;
       this.updateStats({
         lives: 0,
         combo: 1,
+        lastHitAntagonist,
         message: obstacleLabel ? `U përplase me ${obstacleLabel}` : "U përplase",
       });
       this.loseRound();
@@ -922,6 +1061,9 @@ class RunnerScene extends Phaser.Scene {
     this.wasGrounded = true;
     this.lastSpawnCategory = "ground_low";
     this.timePhase = "morning";
+    this.cagedEdi = false;
+    this.cagedSali = false;
+    this.endBossChase(false);
 
     this.cameras.main.setBackgroundColor(this.level.skyColor);
     this.cityBack?.clearTint();
@@ -1115,7 +1257,9 @@ class RunnerScene extends Phaser.Scene {
     return list[Phaser.Math.Between(0, list.length - 1)];
   }
 
-  private collectibleTexture(target: CollectibleTarget) {
+  private collectibleTexture(target: CollectibleTarget): "edi-character" | "sali-character" | "person" | "dokument" | "shenje" {
+    if ("antagonist" in target && target.antagonist === "edi") return "edi-character";
+    if ("antagonist" in target && target.antagonist === "sali") return "sali-character";
     if ("emri" in target) return "person";
     if ("titull" in target) return "dokument";
     return "shenje";
@@ -1315,7 +1459,45 @@ class RunnerScene extends Phaser.Scene {
     }
   }
 
-  private slamRubberStamp(x: number, y: number) {
+  private spawnPrisonCage(x: number, y: number, antagonist: "edi" | "sali") {
+    const cage = this.add.image(x, y - 50, "prison-cage");
+    cage.setDepth(DEPTH_LABEL + 8);
+    cage.setScale(1.3);
+    cage.setAlpha(0.6);
+
+    const charSprite = this.add.image(x, y, antagonist === "edi" ? "edi-character" : "sali-character");
+    charSprite.setDisplaySize(44, 66);
+    charSprite.setDepth(DEPTH_LABEL + 6);
+
+    // Cage slam down animation
+    this.tweens.add({
+      targets: cage,
+      y: y,
+      scaleX: 1,
+      scaleY: 1,
+      alpha: 1,
+      duration: 100,
+      ease: "Back.easeOut",
+      onComplete: () => {
+        this.cameras.main.shake(90, 0.008);
+        // Drop comically off-screen
+        this.tweens.add({
+          targets: [cage, charSprite],
+          y: this.scale.height + 80,
+          angle: Phaser.Math.Between(-15, 15),
+          delay: 450,
+          duration: 550,
+          ease: "Cubic.easeIn",
+          onComplete: () => {
+            cage.destroy();
+            charSprite.destroy();
+          },
+        });
+      },
+    });
+  }
+
+  private slamRubberStamp(x: number, y: number, customText?: string) {
     const stamps = [
       "RNBNB!",
       "RAMA N'BURG!",
@@ -1327,7 +1509,7 @@ class RunnerScene extends Phaser.Scene {
       "GËNJESHTËR!",
       "FASADË TOTAL!",
     ];
-    const text = Phaser.Utils.Array.GetRandom(stamps);
+    const text = customText || Phaser.Utils.Array.GetRandom(stamps);
     const tilt = Phaser.Math.Between(-12, 12);
     const clampedX = Phaser.Math.Clamp(x, 140, this.scale.width - 140);
 

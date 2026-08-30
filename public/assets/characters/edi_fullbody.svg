@@ -1,0 +1,172 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1536" viewBox="0 0 1024 1536">
+  <defs>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E8B07D"/>
+      <stop offset="1" stop-color="#C98A5F"/>
+    </linearGradient>
+    <linearGradient id="jacket" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#202226"/>
+      <stop offset="1" stop-color="#07080A"/>
+    </linearGradient>
+    <linearGradient id="pants" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#16181C"/>
+      <stop offset="1" stop-color="#050609"/>
+    </linearGradient>
+    <linearGradient id="shirt" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#D8DCE2"/>
+    </linearGradient>
+    <linearGradient id="shoe" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#202227"/>
+      <stop offset="1" stop-color="#050507"/>
+    </linearGradient>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+  </defs>
+
+  <!-- transparent background -->
+
+  <!-- ground shadow -->
+  <ellipse cx="517" cy="1456" rx="286" ry="34" fill="#000" opacity=".18" filter="url(#softShadow)"/>
+
+  <!-- back leg -->
+  <path d="M553 947 L686 944 L724 1328 L653 1364 L568 1058 Z" fill="url(#pants)" stroke="#000" stroke-width="12" stroke-linejoin="round"/>
+  <!-- front leg -->
+  <path d="M391 944 L553 944 L526 1340 L447 1368 L365 1098 Z" fill="url(#pants)" stroke="#000" stroke-width="12" stroke-linejoin="round"/>
+
+  <!-- shoes -->
+  <path d="M418 1323 C443 1311 488 1307 527 1337 L518 1412 C451 1432 332 1433 286 1400 C305 1361 354 1340 418 1323 Z" fill="url(#shoe)" stroke="#000" stroke-width="12"/>
+  <path d="M653 1330 C693 1324 724 1332 752 1360 C779 1386 784 1416 752 1435 C705 1447 639 1435 602 1406 L607 1348 Z" fill="url(#shoe)" stroke="#000" stroke-width="12"/>
+  <path d="M316 1396 C369 1411 444 1412 510 1396" fill="none" stroke="#4C4F55" stroke-width="7" opacity=".7"/>
+  <path d="M624 1400 C670 1418 716 1419 755 1408" fill="none" stroke="#4C4F55" stroke-width="7" opacity=".7"/>
+
+  <!-- torso / jacket -->
+  <path d="M285 582
+           C320 527 392 506 449 494
+           L571 494
+           C640 507 713 533 745 587
+           C776 639 780 774 764 935
+           C714 963 648 980 582 983
+           L455 983
+           C387 980 320 964 270 935
+           C255 790 255 638 285 582 Z"
+        fill="url(#jacket)" stroke="#000" stroke-width="14" stroke-linejoin="round"/>
+
+  <!-- shirt -->
+  <path d="M437 503 L508 493 L579 505
+           L622 596 L587 939
+           L449 939 L400 594 Z"
+        fill="url(#shirt)" stroke="#C3C7CD" stroke-width="7" stroke-linejoin="round"/>
+
+  <!-- open collar -->
+  <path d="M437 504 L480 555 L514 624 L400 589 Z" fill="#F6F6F6" stroke="#AEB3BB" stroke-width="6"/>
+  <path d="M579 505 L544 555 L514 624 L622 592 Z" fill="#F8F8F8" stroke="#AEB3BB" stroke-width="6"/>
+  <path d="M514 624 L527 888" stroke="#B8BDC5" stroke-width="6"/>
+
+  <!-- shirt buttons -->
+  <circle cx="524" cy="687" r="7" fill="#D7D4C9"/>
+  <circle cx="527" cy="758" r="7" fill="#D7D4C9"/>
+  <circle cx="530" cy="829" r="7" fill="#D7D4C9"/>
+
+  <!-- jacket lapels -->
+  <path d="M399 528 L335 606 L413 718 L470 642 Z" fill="#15171B" stroke="#030405" stroke-width="8"/>
+  <path d="M584 526 L678 603 L611 715 L552 640 Z" fill="#15171B" stroke="#030405" stroke-width="8"/>
+
+  <!-- left arm -->
+  <path d="M306 585 C250 614 225 690 229 812 C232 891 265 956 314 988
+           L369 931 C339 891 331 845 334 784 L370 661 Z"
+        fill="url(#jacket)" stroke="#000" stroke-width="14"/>
+  <!-- right arm -->
+  <path d="M727 584 C783 619 804 695 795 823 C789 900 754 957 711 990
+           L654 930 C684 889 694 845 691 785 L655 662 Z"
+        fill="url(#jacket)" stroke="#000" stroke-width="14"/>
+
+  <!-- hands -->
+  <path d="M315 930 C337 922 362 932 372 955 C377 977 365 1003 343 1016
+           C319 1019 300 1002 295 977 C297 955 304 941 315 930 Z"
+        fill="url(#skin)" stroke="#7E4A35" stroke-width="7"/>
+  <path d="M711 931 C688 923 663 933 654 956 C648 980 661 1005 684 1017
+           C709 1019 728 1000 731 976 C729 954 722 940 711 931 Z"
+        fill="url(#skin)" stroke="#7E4A35" stroke-width="7"/>
+
+  <!-- trouser waist -->
+  <path d="M382 920 C436 938 585 938 646 921 L641 975 C577 992 439 993 384 975 Z"
+        fill="#0A0B0D" stroke="#000" stroke-width="10"/>
+  <!-- belt -->
+  <rect x="401" y="935" width="229" height="30" rx="10" fill="#181A1E" stroke="#020203" stroke-width="7"/>
+  <rect x="493" y="929" width="48" height="42" rx="6" fill="#3A3030" stroke="#0A0A0A" stroke-width="7"/>
+
+  <!-- neck -->
+  <path d="M443 427 L579 427 L571 518 C553 552 477 553 453 516 Z" fill="url(#skin)" stroke="#7E4A35" stroke-width="8"/>
+
+  <!-- ears -->
+  <ellipse cx="366" cy="339" rx="40" ry="61" fill="url(#skin)" stroke="#7E4A35" stroke-width="8"/>
+  <ellipse cx="657" cy="339" rx="40" ry="61" fill="url(#skin)" stroke="#7E4A35" stroke-width="8"/>
+
+  <!-- head -->
+  <path d="M384 263
+           C392 164 451 116 515 116
+           C584 116 640 166 646 265
+           L641 354
+           C632 429 582 485 516 492
+           C447 486 396 431 384 356 Z"
+        fill="url(#skin)" stroke="#7A4634" stroke-width="10"/>
+
+  <!-- side hair -->
+  <path d="M386 250 C394 174 444 130 506 118 C456 120 401 150 376 213
+           C360 252 358 301 368 342 L388 344 Z"
+        fill="#E4E0D7" opacity=".82"/>
+  <path d="M644 251 C634 177 586 132 522 117 C583 119 627 153 649 211
+           C663 249 666 302 657 344 L639 345 Z"
+        fill="#E4E0D7" opacity=".82"/>
+
+  <!-- brows -->
+  <path d="M418 300 C445 281 477 281 497 295" fill="none" stroke="#3B312D" stroke-width="17" stroke-linecap="round"/>
+  <path d="M535 294 C557 281 590 282 613 300" fill="none" stroke="#3B312D" stroke-width="17" stroke-linecap="round"/>
+
+  <!-- eyes -->
+  <path d="M417 324 C442 310 472 311 494 325 C473 342 441 343 417 324 Z" fill="#F3E8DC" stroke="#704535" stroke-width="5"/>
+  <path d="M536 324 C559 311 590 310 614 324 C590 343 558 342 536 324 Z" fill="#F3E8DC" stroke="#704535" stroke-width="5"/>
+  <circle cx="457" cy="326" r="11" fill="#6A6040"/>
+  <circle cx="574" cy="326" r="11" fill="#6A6040"/>
+  <circle cx="457" cy="326" r="5" fill="#151515"/>
+  <circle cx="574" cy="326" r="5" fill="#151515"/>
+
+  <!-- nose -->
+  <path d="M510 320 C498 352 490 374 501 393 C514 399 531 397 541 388" fill="none" stroke="#9B6248" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- beard base -->
+  <path d="M394 371
+           C409 418 449 458 514 468
+           C579 457 619 418 634 371
+           C612 388 596 390 579 385
+           C559 381 540 382 514 391
+           C487 382 468 381 448 385
+           C431 390 415 388 394 371 Z"
+        fill="#E2DED5" stroke="#81776F" stroke-width="8"/>
+
+  <!-- moustache -->
+  <path d="M457 385 C479 372 500 372 514 385 C528 372 551 372 574 385
+           C559 401 539 405 514 397 C489 405 471 401 457 385 Z"
+        fill="#BBB5AC" stroke="#81776F" stroke-width="5"/>
+
+  <!-- mouth -->
+  <path d="M478 413 C499 422 530 423 552 413" fill="none" stroke="#6B3F36" stroke-width="7" stroke-linecap="round"/>
+
+  <!-- forehead / cheek detail -->
+  <path d="M432 244 C457 236 483 238 499 245" fill="none" stroke="#AF7657" stroke-width="4" opacity=".6"/>
+  <path d="M529 245 C551 236 579 238 597 246" fill="none" stroke="#AF7657" stroke-width="4" opacity=".6"/>
+  <path d="M424 357 C446 370 468 371 489 360" fill="none" stroke="#B0785B" stroke-width="4" opacity=".5"/>
+  <path d="M539 360 C559 371 584 370 606 357" fill="none" stroke="#B0785B" stroke-width="4" opacity=".5"/>
+
+  <!-- lapel pin -->
+  <g transform="translate(621 618) rotate(12)">
+    <rect x="0" y="0" width="15" height="55" rx="3" fill="#ED1B24"/>
+    <rect x="2" y="20" width="11" height="9" fill="#111"/>
+  </g>
+
+  <!-- game-character highlight -->
+  <path d="M286 608 C328 550 385 530 433 518" fill="none" stroke="#FFFFFF" stroke-width="5" opacity=".10"/>
+  <path d="M659 545 C720 578 747 646 748 714" fill="none" stroke="#FFFFFF" stroke-width="5" opacity=".08"/>
+</svg>
