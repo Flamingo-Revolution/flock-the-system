@@ -20,8 +20,8 @@ const PLAYER_DISPLAY_WIDTH = 46;
 const PLAYER_DISPLAY_HEIGHT = 66;
 const GROUND_HEIGHT = 72;
 const INVULNERABLE_MS = 650;
-const SPEED_RAMP_RATE = 0.009;
-const SPEED_RAMP_MAX = 1.5;
+const SPEED_RAMP_RATE = 0.011;
+const SPEED_RAMP_MAX = 2.0;
 const DISTANCE_TICK_MS = 120;
 const RUN_FRAME_MS = 120;
 const JUMP_BUFFER_MS = 140;
@@ -358,18 +358,25 @@ class RunnerScene extends Phaser.Scene {
   private updateDayNightCycle() {
     if (this.stats.status !== "playing") return;
     const elapsedSeconds = (this.time.now - this.roundStartAt) / 1000;
+    const cycleSeconds = elapsedSeconds % 60;
 
-    if (elapsedSeconds >= 34 && this.timePhase === "sunset") {
+    if (cycleSeconds >= 40 && this.timePhase !== "night") {
       this.timePhase = "night";
       soundManager.playSiren();
       this.showBreakingNews("🚨 ALARM SHTETËROR: Flamingoja mori sheshin, propaganda dështoi!");
       this.transitionSkyColor(0x0f172a, 0x312e81, 0x4338ca);
       this.player.setTint(0xff4f8b);
-    } else if (elapsedSeconds >= 14 && this.timePhase === "morning") {
+    } else if (cycleSeconds >= 20 && cycleSeconds < 40 && this.timePhase !== "sunset") {
       this.timePhase = "sunset";
       soundManager.playSiren();
-      this.showBreakingNews("🚨 NJOFTIM: Qytetarë, mos shikoni gropat, shijoni fasadat e reja!");
+      this.showBreakingNews("🚨 NJOFTIM: Deputetët kërkojnë të mos shikohen çadrat e protestës!");
       this.transitionSkyColor(0xe76f51, 0xff9e00, 0xffb703);
+      this.player.clearTint();
+    } else if (cycleSeconds < 20 && this.timePhase !== "morning" && elapsedSeconds > 5) {
+      this.timePhase = "morning";
+      this.showBreakingNews("☀️ AGIMI I PROTESTËS: Sheshi mbushet sërish me qytetarë!");
+      this.transitionSkyColor(0x93e4ef, 0xffffff, 0xffffff);
+      this.player.clearTint();
     }
   }
 
@@ -523,12 +530,12 @@ class RunnerScene extends Phaser.Scene {
         nextDelay = Phaser.Math.Between(1650, 2150);
       } else if (elapsedSeconds < 40) {
         // 15-40s: Comfortable gentle pacing
-        nextDelay = Phaser.Math.Between(1450, 1850);
+        nextDelay = Phaser.Math.Between(1400, 1800);
       } else {
-        // 40s+: Progressive arcade challenge
+        // 40s+: Progressive arcade challenge scaling with speed
         const baseDelay = this.level.obstacleDelayMs / this.currentSpeedMultiplier();
-        const jitter = Phaser.Math.Between(-180, 220);
-        nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 900, 1500);
+        const jitter = Phaser.Math.Between(-160, 200);
+        nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 800, 1350);
       }
     }
 
@@ -746,18 +753,27 @@ class RunnerScene extends Phaser.Scene {
 
     // Sparkles & Floating Score
     this.emitSparkles(collectible.x, collectible.y, 8);
-    this.floatText(collectible.x, collectible.y - 28, `+${gained}`, combo >= 3 ? "#ffd23f" : "#ffffff");
+    // Milestone celebrations every 10 exposures without interrupting the run
+    if (exposure % 10 === 0) {
+      soundManager.playWin();
+      this.emitSparkles(this.scale.width / 2, this.scale.height * 0.3, 22);
+      const bonus = exposure * 50;
+      this.showBreakingNews(`🔥 REVOLUCIONI PO RRITET: ${exposure} Zbulime! (+${bonus} Pikë)`);
+      this.updateStats({
+        score: score + bonus,
+        exposure,
+        combo,
+        message: `${exposure} zbulime të arritura!`,
+      });
+      return;
+    }
 
     this.updateStats({
       score,
       exposure,
       combo,
-      message: exposure >= this.level.targetExposure ? "Faza u kalua!" : "Zbulim i ri!",
+      message: `${this.targetReveal(target)}!`,
     });
-
-    if (exposure >= this.level.targetExposure) {
-      this.winRound();
-    }
   }
 
   private takeHit(obstacle?: MovingSprite) {
@@ -1301,16 +1317,15 @@ class RunnerScene extends Phaser.Scene {
 
   private slamRubberStamp(x: number, y: number) {
     const stamps = [
+      "RNBNB!",
+      "RAMA N'BURG!",
+      "BERISHA N'BURG!",
+      "TË GJITHË N'BURG!",
+      "ZEQINE SHKO N'SHKOLLË!",
+      "3 MILIONË JEMI NE!",
+      "TI NUK DI TË NUMËROSH!",
       "GËNJESHTËR!",
-      "TENDER ME 1 OFERTË!",
       "FASADË TOTAL!",
-      "PUNËTORË IMAGJINARË!",
-      "KUSHËRIRI FITON!",
-      "PDF I SKANUAR!",
-      "ORA PA BATERI!",
-      "SPORTELI MBYLLUR!",
-      "KONSULTIM I FSHUR!",
-      "SKANDAL TOTAL!",
     ];
     const text = Phaser.Utils.Array.GetRandom(stamps);
     const tilt = Phaser.Math.Between(-12, 12);

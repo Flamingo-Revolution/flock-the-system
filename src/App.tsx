@@ -6,32 +6,20 @@ import { getLevel, levels } from "./game/levels";
 import "./styles.css";
 
 const BEST_SCORE_KEY = "flamingoja-e-fundit-best-score";
-const COMPLETED_LEVELS_KEY = "flamingoja-e-fundit-completed-levels";
 const DEFAULT_LEVEL_ID = levels[0].id;
-
-function readCompletedLevels() {
-  try {
-    const saved = window.localStorage.getItem(COMPLETED_LEVELS_KEY);
-    return new Set<string>(saved ? (JSON.parse(saved) as string[]) : []);
-  } catch {
-    return new Set<string>();
-  }
-}
 
 export default function App() {
   const gameHost = useRef<HTMLDivElement | null>(null);
   const bestScoreRef = useRef(0);
-  const [selectedLevelId, setSelectedLevelId] = useState(DEFAULT_LEVEL_ID);
-  const selectedLevel = getLevel(selectedLevelId);
-  const [completedLevels, setCompletedLevels] = useState(readCompletedLevels);
-  const [isStageMenuOpen, setIsStageMenuOpen] = useState(false);
+  const selectedLevel = getLevel(DEFAULT_LEVEL_ID);
+  const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(() => soundManager.getMuted());
   const [stats, setStats] = useState<GameStats>({
     levelId: selectedLevel.id,
     levelName: selectedLevel.name,
     score: 0,
     exposure: 0,
-    lives: 1,
+    lives: 2,
     combo: 1,
     status: "ready",
     message: selectedLevel.intro,
@@ -48,7 +36,7 @@ export default function App() {
   }
 
   function startGame() {
-    setIsStageMenuOpen(false);
+    setIsRulesModalOpen(false);
     sendCommand("start");
   }
 
@@ -58,19 +46,10 @@ export default function App() {
     setIsMuted(nextMuted);
   }
 
-  function goToNextLevel(event: React.MouseEvent) {
-    event.stopPropagation();
-    const currentIndex = levels.findIndex((lvl) => lvl.id === selectedLevelId);
-    if (currentIndex < levels.length - 1) {
-      setSelectedLevelId(levels[currentIndex + 1].id);
-      sendCommand("restart");
-    }
-  }
-
   useEffect(() => {
     if (!gameHost.current) return;
 
-    const game = createGame(gameHost.current, selectedLevelId, {
+    const game = createGame(gameHost.current, selectedLevel.id, {
       onStatsChange(nextStats) {
         setStats(nextStats);
         if (nextStats.score > bestScoreRef.current) {
@@ -79,29 +58,19 @@ export default function App() {
           window.localStorage.setItem(BEST_SCORE_KEY, String(nextStats.score));
         }
       },
-      onLevelComplete(levelId) {
-        setCompletedLevels((currentCompletedLevels) => {
-          const nextCompletedLevels = new Set(currentCompletedLevels);
-          nextCompletedLevels.add(levelId);
-          window.localStorage.setItem(
-            COMPLETED_LEVELS_KEY,
-            JSON.stringify([...nextCompletedLevels]),
-          );
-          return nextCompletedLevels;
-        });
+      onLevelComplete() {
+        // level complete callback
       },
     });
 
     return () => {
       game.destroy(true);
     };
-  }, [selectedLevelId]);
+  }, [selectedLevel.id]);
 
   const showStartScreen =
     stats.status === "ready" || stats.status === "won" || stats.status === "lost";
   const isPlaying = stats.status === "playing";
-  const currentIndex = levels.findIndex((lvl) => lvl.id === selectedLevelId);
-  const hasNextLevel = stats.status === "won" && currentIndex < levels.length - 1;
 
   return (
     <main className="app-shell">
@@ -136,9 +105,7 @@ export default function App() {
             <span className="stat-icon">🎯</span>
             <div className="stat-content">
               <span className="stat-label">ZBULIME</span>
-              <span className="stat-val">
-                {stats.exposure}/{selectedLevel.targetExposure}
-              </span>
+              <span className="stat-val">{stats.exposure}</span>
             </div>
           </div>
 
@@ -190,27 +157,21 @@ export default function App() {
             <p className="phase-label">{selectedLevel.phase}</p>
             <h2>
               {stats.status === "won"
-                ? "Faza u Kalua!"
+                ? "Sheshi u Çlirua!"
                 : stats.status === "lost"
-                  ? "Fund Loje!"
+                  ? "Fund Marshimi!"
                   : selectedLevel.name}
             </h2>
             <p className="status-subtext">{stats.message}</p>
 
             <div className="start-actions">
-              {hasNextLevel ? (
-                <button
-                  type="button"
-                  className="primary-start next-stage-btn"
-                  onClick={goToNextLevel}
-                >
-                  Faza Tjetër →
-                </button>
-              ) : (
-                <button type="button" className="primary-start" onClick={startGame}>
-                  {stats.status === "lost" ? "Rinis menjëherë" : "Prek për të nisur"}
-                </button>
-              )}
+              <button type="button" className="primary-start" onClick={startGame}>
+                {stats.status === "lost"
+                  ? "Rinis Marshimin"
+                  : stats.status === "won"
+                    ? "Vazhdo Marshimin"
+                    : "Nis Marshimin"}
+              </button>
 
               <div className="secondary-row">
                 <button
@@ -218,10 +179,10 @@ export default function App() {
                   className="secondary-button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    setIsStageMenuOpen((isOpen) => !isOpen);
+                    setIsRulesModalOpen(true);
                   }}
                 >
-                  Zgjidh Fazat
+                  📜 Rregullat e Protestës
                 </button>
               </div>
             </div>
@@ -229,42 +190,24 @@ export default function App() {
         </section>
       ) : null}
 
-      {/* Stage Drawer */}
-      {isStageMenuOpen ? (
-        <aside className="stage-drawer" aria-label="Fazat">
+      {/* Protest Rules Modal */}
+      {isRulesModalOpen ? (
+        <aside className="stage-drawer" aria-label="Rregullat">
           <div className="stage-drawer-header">
-            <h2>Fazat e Propagandës</h2>
+            <h2>Rregullat e Revolucionit</h2>
             <button
               type="button"
               className="drawer-close-btn"
-              onClick={() => setIsStageMenuOpen(false)}
+              onClick={() => setIsRulesModalOpen(false)}
             >
               ✕
             </button>
           </div>
-          <div className="level-list">
-            {levels.map((level, index) => {
-              const previousLevel = levels[index - 1];
-              const isUnlocked = index === 0 || completedLevels.has(previousLevel.id);
-              const isSelected = selectedLevelId === level.id;
-
-              return (
-                <button
-                  key={level.id}
-                  type="button"
-                  className={isSelected ? "level-button selected" : "level-button"}
-                  disabled={!isUnlocked}
-                  onClick={() => {
-                    setSelectedLevelId(level.id);
-                    setIsStageMenuOpen(false);
-                  }}
-                >
-                  <span>{level.phase}</span>
-                  <strong>{level.name}</strong>
-                  {completedLevels.has(level.id) ? <em className="badge-done">✓ Kaluar</em> : null}
-                </button>
-              );
-            })}
+          <div className="rules-content">
+            <p>🦩 <strong>Flamingoja nuk ndalet:</strong> Prek ekranin ose shtyp <code>Space</code> / <code>W</code> / <code>↑</code> për të kërcyer.</p>
+            <p>💥 <strong>Gris Propagandën:</strong> Kërce në sloganet fluturuese dhe kap deputetët arrogantë për të zbuluar të vërtetat e fshehura.</p>
+            <p>🪶 <strong>Shpëto për një qime:</strong> Flamingoja ka 2 jetë – përplasja e parë të jep imunitet të përkohshëm!</p>
+            <p>☀️ <strong>Cikli i Ditës:</strong> Mëngjesi kthehet në Perëndim, pastaj në Natë me drone, dhe agimi rinis sërish!</p>
           </div>
         </aside>
       ) : null}
