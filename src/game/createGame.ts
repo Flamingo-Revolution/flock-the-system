@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { soundManager } from "./audio";
 import {
   GAME_COMMAND_EVENT,
   type GameCallbacks,
@@ -19,20 +20,20 @@ const PLAYER_DISPLAY_WIDTH = 46;
 const PLAYER_DISPLAY_HEIGHT = 66;
 const GROUND_HEIGHT = 72;
 const INVULNERABLE_MS = 650;
-const SPEED_RAMP_RATE = 0.024;
-const SPEED_RAMP_MAX = 1.75;
+const SPEED_RAMP_RATE = 0.018;
+const SPEED_RAMP_MAX = 1.6;
 const DISTANCE_TICK_MS = 120;
-const RUN_FRAME_MS = 130;
-const FIRST_OBSTACLE_DELAY_MS = 220;
-const FIRST_OBSTACLE_EDGE_OFFSET = 28;
-const JUMP_BUFFER_MS = 130;
-const COYOTE_TIME_MS = 90;
-const JUMP_RELEASE_MIN_MS = 80;
-const JUMP_CUT_MULTIPLIER = 0.52;
-const AIR_HAZARD_UNLOCK_SECONDS = 13;
+const RUN_FRAME_MS = 120;
+const JUMP_BUFFER_MS = 140;
+const COYOTE_TIME_MS = 100;
+const JUMP_RELEASE_MIN_MS = 75;
+const JUMP_CUT_MULTIPLIER = 0.54;
+
 const DEPTH_BACKGROUND_BACK = -40;
 const DEPTH_BACKGROUND_FRONT = -30;
+const DEPTH_SHADOW = 4;
 const DEPTH_GROUND = 5;
+const DEPTH_PARTICLES = 25;
 const DEPTH_OBSTACLE = 30;
 const DEPTH_COLLECTIBLE = 34;
 const DEPTH_PLAYER = 42;
@@ -46,6 +47,8 @@ type LabelBinding = {
   label: Phaser.GameObjects.Text;
   offsetY: number;
 };
+
+type ObstacleCategory = "ground_low" | "ground_med" | "ground_tall" | "air";
 
 function createInitialStats(level: LevelDefinition): GameStats {
   return {
@@ -63,8 +66,11 @@ function createInitialStats(level: LevelDefinition): GameStats {
 class RunnerScene extends Phaser.Scene {
   private level!: LevelDefinition;
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
+  private playerShadow!: Phaser.GameObjects.Image;
   private spaceKey!: Phaser.Input.Keyboard.Key;
   private enterKey!: Phaser.Input.Keyboard.Key;
+  private upKey!: Phaser.Input.Keyboard.Key;
+  private wKey!: Phaser.Input.Keyboard.Key;
   private pauseKey!: Phaser.Input.Keyboard.Key;
   private restartKey!: Phaser.Input.Keyboard.Key;
   private obstacles!: Phaser.Physics.Arcade.Group;
@@ -72,15 +78,16 @@ class RunnerScene extends Phaser.Scene {
   private cityBack!: Phaser.GameObjects.TileSprite;
   private cityFront!: Phaser.GameObjects.TileSprite;
   private ground!: Phaser.GameObjects.TileSprite;
-  private firstObstacleTimer?: Phaser.Time.TimerEvent;
   private spawnTimer?: Phaser.Time.TimerEvent;
   private scoreTimer?: Phaser.Time.TimerEvent;
   private labels = new Map<MovingSprite, LabelBinding>();
+
   private zbulimIndex = 0;
   private politikanIndex = 0;
   private groundIndex = 0;
   private airIndex = 0;
   private documentIndex = 0;
+
   private invulnerableUntil = 0;
   private roundStartAt = 0;
   private nextRunFrameAt = 0;
@@ -89,6 +96,9 @@ class RunnerScene extends Phaser.Scene {
   private jumpStartedAt = 0;
   private runFrame = 0;
   private groundTop = 0;
+  private wasGrounded = true;
+  private isFrozen = false;
+  private lastSpawnCategory: ObstacleCategory = "ground_low";
   private stats!: GameStats;
 
   private readonly handleCommand = (event: Event) => {
@@ -147,6 +157,8 @@ class RunnerScene extends Phaser.Scene {
   }
 
   create() {
+    this.createProceduralTextures();
+
     this.physics.world.gravity.y = this.level.gravityY;
     this.cameras.main.setBackgroundColor(this.level.skyColor);
     this.groundTop = this.scale.height - GROUND_HEIGHT;
@@ -155,16 +167,29 @@ class RunnerScene extends Phaser.Scene {
     this.obstacles = this.physics.add.group();
     this.collectibles = this.physics.add.group();
 
+    // Ground shadow for player
+    this.playerShadow = this.add.image(this.playerX(), this.groundTop + 2, "ground-shadow");
+    this.playerShadow.setDepth(DEPTH_SHADOW).setOrigin(0.5, 0.5);
+
+    // Player with forgiving inner hitbox
     this.player = this.physics.add.sprite(this.playerX(), this.playerGroundY(), "flamingo-a");
     this.player.setDepth(DEPTH_PLAYER);
     this.player.setDisplaySize(PLAYER_DISPLAY_WIDTH, PLAYER_DISPLAY_HEIGHT);
-    this.player.setSize(24, 38).setOffset(11, 22);
+    // Forgiving hitbox: 18x30 offset inwards from the 46x66 display size
+    this.player.setSize(18, 30).setOffset(14, 28);
     this.player.body.allowGravity = false;
 
     this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.enterKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+    this.upKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
+    this.wKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W);
     this.pauseKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.P);
     this.restartKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+
+    this.input.keyboard?.addCapture([
+      Phaser.Input.Keyboard.KeyCodes.SPACE,
+      Phaser.Input.Keyboard.KeyCodes.UP,
+    ]);
 
     this.input.on("pointerdown", () => this.requestJump());
     this.input.on("pointerup", () => this.releaseJump());
@@ -185,7 +210,43 @@ class RunnerScene extends Phaser.Scene {
     this.callbacks.onStatsChange(this.stats);
   }
 
+  private createProceduralTextures() {
+    if (!this.textures.exists("dust-particle")) {
+      const dustGfx = this.make.graphics({ x: 0, y: 0 }, false);
+      dustGfx.fillStyle(0xffffff, 0.85);
+      dustGfx.fillCircle(4, 4, 4);
+      dustGfx.generateTexture("dust-particle", 8, 8);
+      dustGfx.destroy();
+    }
+
+    if (!this.textures.exists("feather-particle")) {
+      const featherGfx = this.make.graphics({ x: 0, y: 0 }, false);
+      featherGfx.fillStyle(0xff4f8b, 0.95);
+      featherGfx.fillEllipse(5, 3, 5, 2.5);
+      featherGfx.generateTexture("feather-particle", 10, 6);
+      featherGfx.destroy();
+    }
+
+    if (!this.textures.exists("sparkle-particle")) {
+      const sparkGfx = this.make.graphics({ x: 0, y: 0 }, false);
+      sparkGfx.fillStyle(0xffd23f, 1);
+      sparkGfx.fillRect(0, 0, 5, 5);
+      sparkGfx.generateTexture("sparkle-particle", 5, 5);
+      sparkGfx.destroy();
+    }
+
+    if (!this.textures.exists("ground-shadow")) {
+      const shadowGfx = this.make.graphics({ x: 0, y: 0 }, false);
+      shadowGfx.fillStyle(0x10131d, 0.28);
+      shadowGfx.fillEllipse(18, 5, 18, 5);
+      shadowGfx.generateTexture("ground-shadow", 36, 10);
+      shadowGfx.destroy();
+    }
+  }
+
   update(time: number, delta: number) {
+    if (this.isFrozen) return;
+
     if (Phaser.Input.Keyboard.JustDown(this.restartKey)) {
       this.resetRound("playing");
       return;
@@ -196,20 +257,47 @@ class RunnerScene extends Phaser.Scene {
       return;
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.spaceKey) || Phaser.Input.Keyboard.JustDown(this.enterKey)) {
+    if (
+      Phaser.Input.Keyboard.JustDown(this.spaceKey) ||
+      Phaser.Input.Keyboard.JustDown(this.enterKey) ||
+      Phaser.Input.Keyboard.JustDown(this.upKey) ||
+      Phaser.Input.Keyboard.JustDown(this.wKey)
+    ) {
       this.requestJump();
     }
 
-    if (Phaser.Input.Keyboard.JustUp(this.spaceKey) || Phaser.Input.Keyboard.JustUp(this.enterKey)) {
+    if (
+      Phaser.Input.Keyboard.JustUp(this.spaceKey) ||
+      Phaser.Input.Keyboard.JustUp(this.enterKey) ||
+      Phaser.Input.Keyboard.JustUp(this.upKey) ||
+      Phaser.Input.Keyboard.JustUp(this.wKey)
+    ) {
       this.releaseJump();
     }
 
     this.player.x = this.playerX();
     this.snapPlayerToGround();
-    if (this.isGrounded()) this.lastGroundedAt = this.time.now;
+
+    const currentlyGrounded = this.isGrounded();
+
+    // Check for landing transition
+    if (!this.wasGrounded && currentlyGrounded && this.stats.status === "playing") {
+      this.handleLanding();
+    }
+    this.wasGrounded = currentlyGrounded;
+
+    if (currentlyGrounded) {
+      this.lastGroundedAt = this.time.now;
+    }
+
+    // Update shadow position and scaling based on height above ground
+    this.updatePlayerShadow();
 
     if (this.stats.status !== "playing") {
-      this.player.setTexture("flamingo-a");
+      if (this.stats.status !== "lost") {
+        this.player.setTexture("flamingo-a");
+        this.player.setAngle(0);
+      }
       return;
     }
 
@@ -217,17 +305,69 @@ class RunnerScene extends Phaser.Scene {
 
     const seconds = delta / 1000;
     const speed = this.currentSpeed();
-    this.cityBack.tilePositionX += speed * 0.1 * seconds;
-    this.cityFront.tilePositionX += speed * 0.28 * seconds;
+    this.cityBack.tilePositionX += speed * 0.08 * seconds;
+    this.cityFront.tilePositionX += speed * 0.22 * seconds;
     this.ground.tilePositionX += speed * seconds;
 
-    if (this.isGrounded()) {
+    // Kinesthetic jump tilt rotation
+    if (currentlyGrounded) {
       this.animateRun(time);
+      this.player.setAngle(0);
     } else {
       this.player.setTexture("flamingo-a");
+      const vy = this.player.body.velocity.y;
+      // Ascending: tilt upwards (-12°), Descending: tilt forward (+18°)
+      const targetAngle = Phaser.Math.Clamp(vy * 0.032, -14, 22);
+      this.player.setAngle(targetAngle);
     }
 
+    // Gentle hover animation for air hazards
+    this.animateAirHazards(time);
+
     this.cleanupObjects();
+  }
+
+  private handleLanding() {
+    soundManager.playLand();
+    this.emitDust(this.player.x - 6, this.groundTop - 2, 4);
+    this.emitDust(this.player.x + 6, this.groundTop - 2, 4);
+
+    // Subtle landing squash & stretch
+    this.tweens.add({
+      targets: this.player,
+      scaleX: 1.12,
+      scaleY: 0.88,
+      duration: 60,
+      yoyo: true,
+      ease: "Quad.easeOut",
+    });
+  }
+
+  private updatePlayerShadow() {
+    if (!this.playerShadow) return;
+    this.playerShadow.x = this.player.x;
+    this.playerShadow.y = this.groundTop + 2;
+
+    const heightAboveGround = Math.max(0, this.playerGroundY() - this.player.y);
+    const scaleRatio = Phaser.Math.Clamp(1 - heightAboveGround * 0.005, 0.4, 1);
+    const alphaRatio = Phaser.Math.Clamp(0.35 - heightAboveGround * 0.002, 0.08, 0.35);
+
+    this.playerShadow.setScale(scaleRatio, scaleRatio);
+    this.playerShadow.setAlpha(alphaRatio);
+  }
+
+  private animateAirHazards(time: number) {
+    this.obstacles.getChildren().forEach((child) => {
+      const sprite = child as MovingSprite;
+      const hazardType = sprite.getData("hazardType");
+      if (hazardType === "air") {
+        const baseY = sprite.getData("baseY") as number;
+        if (baseY) {
+          const hoverOffset = Math.sin((time + sprite.x * 2) * 0.0045) * 6;
+          sprite.y = baseY + hoverOffset;
+        }
+      }
+    });
   }
 
   private startOrJump() {
@@ -253,12 +393,13 @@ class RunnerScene extends Phaser.Scene {
   private startRound() {
     this.roundStartAt = this.time.now;
     this.lastGroundedAt = this.time.now;
+    this.lastSpawnCategory = "ground_low";
     this.player.body.allowGravity = true;
     this.updateStats({ status: "playing", message: this.level.objective });
-    this.firstObstacleTimer = this.time.delayedCall(FIRST_OBSTACLE_DELAY_MS, () => {
-      this.spawnGroundObstacle(this.scale.width + FIRST_OBSTACLE_EDGE_OFFSET);
-    });
-    this.scheduleNextObstacle(1100);
+
+    // Director: First obstacle spawns after comfortable warmup runway (1400ms)
+    this.scheduleObstacleDirector(1400);
+
     this.scoreTimer = this.time.addEvent({
       delay: DISTANCE_TICK_MS,
       loop: true,
@@ -282,12 +423,17 @@ class RunnerScene extends Phaser.Scene {
     this.player.setVelocityY(this.level.jumpVelocity);
     this.player.setTexture("flamingo-a");
 
+    soundManager.playJump();
+    this.emitDust(this.player.x, this.groundTop - 2, 5);
+
+    // Jump launch squash and stretch
     this.tweens.add({
       targets: this.player,
-      scaleX: 0.96,
-      scaleY: 1.06,
-      duration: 85,
+      scaleX: 0.88,
+      scaleY: 1.14,
+      duration: 80,
       yoyo: true,
+      ease: "Quad.easeOut",
     });
   }
 
@@ -298,87 +444,135 @@ class RunnerScene extends Phaser.Scene {
     this.player.setVelocityY(this.player.body.velocity.y * JUMP_CUT_MULTIPLIER);
   }
 
-  private scheduleNextObstacle(overrideDelay?: number) {
-    const base = this.level.obstacleDelayMs / this.currentSpeedMultiplier();
-    const jitter = Phaser.Math.Between(-170, 240);
-    const delay = overrideDelay ?? Phaser.Math.Clamp(base + jitter, 760, 1500);
+  // --- OBSTACLE DIRECTOR (Random & Varied Pacing) ---
+  private scheduleObstacleDirector(overrideDelay?: number) {
+    if (this.stats.status !== "playing") return;
 
-    this.spawnTimer = this.time.delayedCall(delay, () => {
-      this.spawnRunnerObject();
-      this.scheduleNextObstacle();
+    let nextDelay = overrideDelay;
+    if (!nextDelay) {
+      const baseDelay = this.level.obstacleDelayMs / this.currentSpeedMultiplier();
+      const jitter = Phaser.Math.Between(-220, 260);
+      nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 780, 1600);
+    }
+
+    // Scale delay by mobile viewport width and speed multiplier for fairness
+    const widthScale = Phaser.Math.Clamp(this.scale.width / 420, 0.85, 1.15);
+    const adjustedDelay = nextDelay * widthScale;
+
+    this.spawnTimer = this.time.delayedCall(adjustedDelay, () => {
+      this.directorSpawnNext();
+      this.scheduleObstacleDirector();
     });
   }
 
-  private spawnRunnerObject() {
+  private directorSpawnNext() {
     if (this.stats.status !== "playing") return;
 
-    const survivedSeconds = (this.time.now - this.roundStartAt) / 1000;
-    const airChance =
-      survivedSeconds < AIR_HAZARD_UNLOCK_SECONDS
-        ? 0
-        : Phaser.Math.Clamp((survivedSeconds - AIR_HAZARD_UNLOCK_SECONDS) * 0.02, 0.08, 0.24);
+    const elapsedSeconds = (this.time.now - this.roundStartAt) / 1000;
+    const canSpawnAir = this.lastSpawnCategory !== "ground_tall" && elapsedSeconds > 7;
+    const airChance = elapsedSeconds < 7 ? 0 : 0.28;
+
     const roll = Math.random();
-    if (roll > airChance) {
-      this.spawnGroundObstacle();
-    } else {
+
+    if (canSpawnAir && roll < airChance) {
       this.spawnAirHazard();
+    } else {
+      // Randomly pick ground obstacle category
+      const groundRoll = Math.random();
+      if (groundRoll < 0.42) {
+        this.spawnGroundObstacle("ground_low");
+      } else if (groundRoll < 0.74) {
+        this.spawnGroundObstacle("ground_med");
+      } else {
+        this.spawnGroundObstacle("ground_tall");
+      }
     }
 
-    if (Math.random() < 0.28) {
-      this.spawnCollectible();
+    // 38% chance to spawn a bonus collectible in a safe trajectory
+    if (Math.random() < 0.38) {
+      this.spawnCollectibleSafeArc();
     }
   }
 
-  private spawnGroundObstacle(xOverride?: number) {
+  private spawnGroundObstacle(category: "ground_low" | "ground_med" | "ground_tall") {
     if (this.stats.status !== "playing") return;
 
-    const obstacle = this.nextGroundObstacle();
+    const obstacle = this.nextGroundObstacle(category);
     const speed = this.currentSpeed();
-    const x = xOverride ?? this.scale.width + Phaser.Math.Between(42, 86);
+    const x = this.scale.width + Phaser.Math.Between(30, 70);
+
     const isMinistry = obstacle.lloj === "ministri";
     const isPodium = obstacle.lloj === "podium";
-    const width = isMinistry ? 68 : isPodium ? 72 : 82;
-    const height = isMinistry ? 82 : isPodium ? 70 : 42;
-    const sprite = this.physics.add.image(x, this.groundTop - height / 2 + 3, obstacle.texture) as MovingSprite;
+    const width = isMinistry ? 68 : isPodium ? 70 : 68;
+    const height = isMinistry ? 82 : isPodium ? 68 : 36;
+
+    const sprite = this.physics.add.image(
+      x,
+      this.groundTop - height / 2 + 2,
+      obstacle.texture,
+    ) as MovingSprite;
     this.obstacles.add(sprite);
 
     sprite.setDisplaySize(width, height);
     sprite.setActive(true).setVisible(true).setAlpha(1);
     sprite.body.allowGravity = false;
-    sprite.body.setSize(width * 0.58, height * 0.68);
+
+    // Forgiving collision hitboxes
+    if (isMinistry) {
+      sprite.body.setSize(width * 0.46, height * 0.54).setOffset(width * 0.27, height * 0.4);
+    } else if (isPodium) {
+      sprite.body.setSize(width * 0.48, height * 0.52).setOffset(width * 0.26, height * 0.4);
+    } else {
+      sprite.body.setSize(width * 0.48, height * 0.42).setOffset(width * 0.26, height * 0.48);
+    }
+
     sprite.setVelocityX(-speed);
     sprite.setDepth(DEPTH_OBSTACLE);
     sprite.setData("label", obstacle.emri);
+    sprite.setData("hazardType", "ground");
+    this.lastSpawnCategory = category;
   }
 
-  private spawnAirHazard(xOverride?: number) {
+  private spawnAirHazard() {
     if (this.stats.status !== "playing") return;
 
     const hazard = this.nextAirHazard();
     const speed = this.currentSpeed();
-    const x = xOverride ?? this.scale.width + Phaser.Math.Between(72, 150);
-    const y = this.groundTop - Phaser.Math.Between(92, 145);
+    const x = this.scale.width + Phaser.Math.Between(50, 90);
+    // Altitude randomized: either high or mid
+    const y = this.groundTop - Phaser.Math.Between(108, 148);
+
     const sprite = this.physics.add.image(x, y, hazard.texture) as MovingSprite;
     this.obstacles.add(sprite);
-    const size = hazard.lloj === "mikrofon" ? { width: 44, height: 58 } : { width: 62, height: 42 };
 
-    sprite.setDisplaySize(size.width, size.height);
+    const isMic = hazard.lloj === "mikrofon";
+    const width = isMic ? 38 : 54;
+    const height = isMic ? 52 : 36;
+
+    sprite.setDisplaySize(width, height);
     sprite.setActive(true).setVisible(true).setAlpha(1);
     sprite.body.allowGravity = false;
-    sprite.body.setSize(size.width * 0.72, size.height * 0.72);
-    sprite.setVelocityX(-speed * 1.02);
+
+    // Forgiving hitbox for air hazards
+    sprite.body.setSize(width * 0.5, height * 0.5).setOffset(width * 0.25, height * 0.25);
+    sprite.setVelocityX(-speed * 1.04);
     sprite.setDepth(DEPTH_OBSTACLE);
     sprite.setData("label", hazard.emri);
+    sprite.setData("hazardType", "air");
+    sprite.setData("baseY", y);
+
+    this.lastSpawnCategory = "air";
   }
 
-  private spawnCollectible() {
+  private spawnCollectibleSafeArc() {
     if (this.stats.status !== "playing") return;
 
     const target = this.nextCollectibleTarget();
     const texture = this.collectibleTexture(target);
     const speed = this.currentSpeed();
-    const x = this.scale.width + Phaser.Math.Between(170, 260);
-    const y = this.groundTop - Phaser.Math.Between(84, 132);
+    const x = this.scale.width + Phaser.Math.Between(180, 260);
+    const y = this.groundTop - Phaser.Math.Between(92, 136);
+
     const sprite = this.physics.add.image(x, y, texture) as MovingSprite;
     this.collectibles.add(sprite);
 
@@ -410,22 +604,50 @@ class RunnerScene extends Phaser.Scene {
     const target = collectible.getData("target") as CollectibleTarget;
     collectible.setData("collected", true);
     collectible.body.enable = false;
-    collectible.setTexture(collectible.getData("collectedTexture") as string);
-    collectible.setTint(0xf9c74f);
 
+    // Cleanly animate and destroy the attached label so it never remains frozen
     const binding = this.labels.get(collectible);
-    binding?.label.setText(this.targetReveal(target)).setColor("#f9c74f");
+    if (binding) {
+      this.labels.delete(collectible);
+      this.tweens.add({
+        targets: binding.label,
+        y: binding.label.y - 28,
+        alpha: 0,
+        scaleX: 1.15,
+        scaleY: 1.15,
+        duration: 320,
+        ease: "Quad.easeOut",
+        onComplete: () => binding.label.destroy(),
+      });
+    }
+
+    // Cleanly animate and destroy the collectible sprite
+    this.tweens.add({
+      targets: collectible,
+      scaleX: 1.25,
+      scaleY: 1.25,
+      alpha: 0,
+      y: collectible.y - 20,
+      duration: 280,
+      ease: "Quad.easeOut",
+      onComplete: () => collectible.destroy(),
+    });
 
     const combo = Math.min(this.stats.combo + 1, 5);
     const gained = target.pike * this.stats.combo;
     const score = this.stats.score + gained;
     const exposure = this.stats.exposure + 1;
-    this.floatText(collectible.x, collectible.y - 30, `+${gained}`);
+
+    // Audio & particle feedback
+    soundManager.playCollect(this.stats.combo);
+    this.emitSparkles(collectible.x, collectible.y, 8);
+    this.floatText(collectible.x, collectible.y - 28, `+${gained}`, combo >= 3 ? "#ffd23f" : "#ffffff");
+
     this.updateStats({
       score,
       exposure,
       combo,
-      message: exposure >= this.level.targetExposure ? "Faza u kalua" : "Zbulim i ri",
+      message: exposure >= this.level.targetExposure ? "Faza u kalua!" : "Zbulim i ri!",
     });
 
     if (exposure >= this.level.targetExposure) {
@@ -437,15 +659,31 @@ class RunnerScene extends Phaser.Scene {
     if (this.time.now < this.invulnerableUntil || this.stats.status !== "playing") return;
 
     this.invulnerableUntil = this.time.now + INVULNERABLE_MS;
-    this.cameras.main.shake(110, 0.01);
-    this.player.setTint(0xff8aa0);
     const obstacleLabel = obstacle?.getData("label") as string | undefined;
-    this.updateStats({
-      lives: 0,
-      combo: 1,
-      message: obstacleLabel ? `U perplase me ${obstacleLabel}` : "U perplase",
+
+    // Audio and haptics
+    soundManager.playCrash();
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate([40, 30, 90]);
+    }
+
+    // Burst feathers
+    this.emitFeathers(this.player.x, this.player.y, 14);
+
+    // Hit-stop: brief 90ms micro-pause for visceral impact punch
+    this.isFrozen = true;
+    this.player.setTint(0xff4f8b);
+    this.cameras.main.shake(160, 0.015);
+
+    this.time.delayedCall(90, () => {
+      this.isFrozen = false;
+      this.updateStats({
+        lives: 0,
+        combo: 1,
+        message: obstacleLabel ? `U perplase me ${obstacleLabel}` : "U perplase",
+      });
+      this.loseRound();
     });
-    this.loseRound();
   }
 
   private tickDistanceScore() {
@@ -465,14 +703,25 @@ class RunnerScene extends Phaser.Scene {
   private winRound() {
     if (this.stats.status === "won") return;
 
+    soundManager.playWin();
+    this.emitSparkles(this.scale.width / 2, this.scale.height / 2, 25);
     this.stopMotion();
-    this.addBanner("Faza u kalua");
-    this.updateStats({ status: "won", message: "Prek per te vrapuar prape" });
+    this.addBanner("Faza u kalua!");
+    this.updateStats({ status: "won", message: "Prek per te vazhduar" });
     this.callbacks.onLevelComplete(this.level.id, this.stats.score);
   }
 
   private loseRound() {
     this.stopMotion();
+    // Death tumble animation
+    this.tweens.add({
+      targets: this.player,
+      angle: -45,
+      y: this.playerGroundY() + 4,
+      duration: 350,
+      ease: "Bounce.easeOut",
+    });
+
     this.addBanner("Fund loje");
     this.updateStats({ status: "lost", message: "Prek per ta rinisur" });
   }
@@ -481,6 +730,7 @@ class RunnerScene extends Phaser.Scene {
     const shouldStart = status === "playing";
 
     this.stopMotion();
+    this.isFrozen = false;
     this.obstacles.clear(true, true);
     this.collectibles.clear(true, true);
     this.labels.forEach(({ label }) => label.destroy());
@@ -494,6 +744,9 @@ class RunnerScene extends Phaser.Scene {
     this.jumpBufferedUntil = 0;
     this.lastGroundedAt = 0;
     this.jumpStartedAt = 0;
+    this.wasGrounded = true;
+    this.lastSpawnCategory = "ground_low";
+
     this.player.setPosition(this.playerX(), this.playerGroundY());
     this.player.setVelocity(0, 0);
     this.player.setAngle(0);
@@ -501,6 +754,7 @@ class RunnerScene extends Phaser.Scene {
     this.player.setTexture("flamingo-a");
     this.player.clearTint();
     this.player.body.allowGravity = false;
+
     this.stats = createInitialStats(this.level);
     this.callbacks.onStatsChange(this.stats);
 
@@ -514,7 +768,6 @@ class RunnerScene extends Phaser.Scene {
   private togglePause() {
     if (this.stats.status === "playing") {
       this.physics.world.pause();
-      if (this.firstObstacleTimer) this.firstObstacleTimer.paused = true;
       if (this.spawnTimer) this.spawnTimer.paused = true;
       if (this.scoreTimer) this.scoreTimer.paused = true;
       this.updateStats({ status: "paused", message: "Pauze" });
@@ -524,7 +777,6 @@ class RunnerScene extends Phaser.Scene {
 
     if (this.stats.status === "paused") {
       this.physics.world.resume();
-      if (this.firstObstacleTimer) this.firstObstacleTimer.paused = false;
       if (this.spawnTimer) this.spawnTimer.paused = false;
       if (this.scoreTimer) this.scoreTimer.paused = false;
       this.updateStats({ status: "playing", message: this.level.objective });
@@ -532,7 +784,6 @@ class RunnerScene extends Phaser.Scene {
   }
 
   private stopMotion() {
-    this.firstObstacleTimer?.destroy();
     this.spawnTimer?.destroy();
     this.scoreTimer?.destroy();
     this.physics.world.resume();
@@ -639,7 +890,8 @@ class RunnerScene extends Phaser.Scene {
 
     this.runFrame = this.runFrame === 0 ? 1 : 0;
     this.player.setTexture(this.runFrame === 0 ? "flamingo-a" : "flamingo-b");
-    this.nextRunFrameAt = time + RUN_FRAME_MS;
+    const interval = RUN_FRAME_MS / this.currentSpeedMultiplier();
+    this.nextRunFrameAt = time + interval;
   }
 
   private nextCollectibleTarget(): CollectibleTarget {
@@ -650,33 +902,37 @@ class RunnerScene extends Phaser.Scene {
   }
 
   private nextZbulim() {
-    const zbulim = this.level.zbulime[this.zbulimIndex % this.level.zbulime.length];
-    this.zbulimIndex += 1;
-    return zbulim;
+    const list = this.level.zbulime;
+    return list[Phaser.Math.Between(0, list.length - 1)];
   }
 
   private nextPolitikan() {
-    const politikan = this.level.politikanet[this.politikanIndex % this.level.politikanet.length];
-    this.politikanIndex += 1;
-    return politikan;
+    const list = this.level.politikanet;
+    return list[Phaser.Math.Between(0, list.length - 1)];
   }
 
-  private nextGroundObstacle() {
-    const obstacle = this.level.pengesaToke[this.groundIndex % this.level.pengesaToke.length];
-    this.groundIndex += 1;
-    return obstacle;
+  private nextGroundObstacle(category?: "ground_low" | "ground_med" | "ground_tall") {
+    let pool = this.level.pengesaToke;
+    if (category === "ground_low") {
+      pool = this.level.pengesaToke.filter((item) => item.lloj === "letra");
+    } else if (category === "ground_med") {
+      pool = this.level.pengesaToke.filter((item) => item.lloj === "podium");
+    } else if (category === "ground_tall") {
+      pool = this.level.pengesaToke.filter((item) => item.lloj === "ministri");
+    }
+
+    if (pool.length === 0) pool = this.level.pengesaToke;
+    return pool[Phaser.Math.Between(0, pool.length - 1)];
   }
 
   private nextAirHazard() {
-    const hazard = this.level.rreziqeAjri[this.airIndex % this.level.rreziqeAjri.length];
-    this.airIndex += 1;
-    return hazard;
+    const list = this.level.rreziqeAjri;
+    return list[Phaser.Math.Between(0, list.length - 1)];
   }
 
   private nextDocument() {
-    const document = this.level.dokumente[this.documentIndex % this.level.dokumente.length];
-    this.documentIndex += 1;
-    return document;
+    const list = this.level.dokumente;
+    return list[Phaser.Math.Between(0, list.length - 1)];
   }
 
   private collectibleTexture(target: CollectibleTarget) {
@@ -729,23 +985,103 @@ class RunnerScene extends Phaser.Scene {
     return this.groundTop - PLAYER_DISPLAY_HEIGHT / 2 + 4;
   }
 
-  private floatText(x: number, y: number, text: string) {
+  private emitDust(x: number, y: number, count = 4) {
+    for (let i = 0; i < count; i++) {
+      const p = this.add.image(
+        x + Phaser.Math.Between(-8, 8),
+        y + Phaser.Math.Between(-3, 3),
+        "dust-particle",
+      );
+      p.setDepth(DEPTH_PARTICLES).setScale(Phaser.Math.FloatBetween(0.6, 1.2));
+
+      this.tweens.add({
+        targets: p,
+        x: p.x + Phaser.Math.Between(-24, -4),
+        y: p.y - Phaser.Math.Between(6, 18),
+        alpha: 0,
+        scale: 0.2,
+        duration: Phaser.Math.Between(250, 400),
+        ease: "Cubic.easeOut",
+        onComplete: () => p.destroy(),
+      });
+    }
+  }
+
+  private emitFeathers(x: number, y: number, count = 12) {
+    for (let i = 0; i < count; i++) {
+      const p = this.add.image(x, y, "feather-particle");
+      p.setDepth(DEPTH_PARTICLES).setAngle(Phaser.Math.Between(0, 360));
+
+      const angle = Phaser.Math.FloatBetween(-Math.PI, Math.PI);
+      const speed = Phaser.Math.Between(90, 220);
+      const targetX = x + Math.cos(angle) * speed;
+      const targetY = y + Math.sin(angle) * speed + 30;
+
+      this.tweens.add({
+        targets: p,
+        x: targetX,
+        y: targetY,
+        angle: p.angle + Phaser.Math.Between(-180, 180),
+        alpha: 0,
+        scale: 0.4,
+        duration: Phaser.Math.Between(500, 850),
+        ease: "Quad.easeOut",
+        onComplete: () => p.destroy(),
+      });
+    }
+  }
+
+  private emitSparkles(x: number, y: number, count = 8) {
+    for (let i = 0; i < count; i++) {
+      const p = this.add.image(x, y, "sparkle-particle");
+      p.setDepth(DEPTH_PARTICLES);
+
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const distance = Phaser.Math.Between(20, 60);
+
+      this.tweens.add({
+        targets: p,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        alpha: 0,
+        scale: 0.1,
+        duration: Phaser.Math.Between(350, 600),
+        ease: "Cubic.easeOut",
+        onComplete: () => p.destroy(),
+      });
+    }
+  }
+
+  private floatText(x: number, y: number, text: string, color = "#ffffff") {
     const label = this.add
       .text(x, y, text, {
-        color: "#263238",
+        color,
         fontFamily: "Arial",
-        fontSize: "16px",
-        fontStyle: "bold",
+        fontSize: "18px",
+        fontStyle: "900",
+        stroke: "#10131d",
+        strokeThickness: 3,
       })
       .setOrigin(0.5)
       .setDepth(DEPTH_LABEL);
 
     this.tweens.add({
       targets: label,
-      alpha: 0,
-      y: label.y - 24,
-      duration: 700,
-      onComplete: () => label.destroy(),
+      scaleX: 1.3,
+      scaleY: 1.3,
+      y: label.y - 32,
+      duration: 180,
+      yoyo: true,
+      ease: "Quad.easeOut",
+      onComplete: () => {
+        this.tweens.add({
+          targets: label,
+          alpha: 0,
+          y: label.y - 16,
+          duration: 350,
+          onComplete: () => label.destroy(),
+        });
+      },
     });
   }
 
@@ -753,11 +1089,11 @@ class RunnerScene extends Phaser.Scene {
     const banner = this.add
       .text(this.scale.width / 2, Math.max(76, this.scale.height * 0.18), message, {
         align: "center",
-        backgroundColor: "#263238",
+        backgroundColor: "#10131d",
         color: "#ffffff",
-        fixedWidth: Math.min(330, this.scale.width - 36),
+        fixedWidth: Math.min(320, this.scale.width - 36),
         fontFamily: "Arial",
-        fontSize: "18px",
+        fontSize: "17px",
         fontStyle: "bold",
         padding: { x: 12, y: 8 },
       })
@@ -768,7 +1104,7 @@ class RunnerScene extends Phaser.Scene {
       targets: banner,
       alpha: 0,
       delay: 950,
-      duration: 500,
+      duration: 450,
       onComplete: () => banner.destroy(),
     });
   }
