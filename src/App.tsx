@@ -142,6 +142,12 @@ export default function App() {
             </div>
           </div>
 
+          <div className="stat-divider" />
+
+          <div className="stat-item stat-lives" title={`${stats.lives} jetë të mbetura`}>
+            <span className="stat-icon">{stats.lives > 1 ? "🪶🪶" : "🪶"}</span>
+          </div>
+
           {stats.combo > 1 ? (
             <>
               <div className="stat-divider" />

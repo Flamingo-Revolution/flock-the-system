@@ -20,8 +20,8 @@ const PLAYER_DISPLAY_WIDTH = 46;
 const PLAYER_DISPLAY_HEIGHT = 66;
 const GROUND_HEIGHT = 72;
 const INVULNERABLE_MS = 650;
-const SPEED_RAMP_RATE = 0.018;
-const SPEED_RAMP_MAX = 1.6;
+const SPEED_RAMP_RATE = 0.009;
+const SPEED_RAMP_MAX = 1.5;
 const DISTANCE_TICK_MS = 120;
 const RUN_FRAME_MS = 120;
 const JUMP_BUFFER_MS = 140;
@@ -56,7 +56,7 @@ function createInitialStats(level: LevelDefinition): GameStats {
     levelName: level.name,
     score: 0,
     exposure: 0,
-    lives: 1,
+    lives: 2, // 2 lives: 1 stumble grace + 1 fatal hit
     combo: 1,
     status: "ready",
     message: level.intro,
@@ -99,6 +99,7 @@ class RunnerScene extends Phaser.Scene {
   private wasGrounded = true;
   private isFrozen = false;
   private lastSpawnCategory: ObstacleCategory = "ground_low";
+  private timePhase: "morning" | "sunset" | "night" = "morning";
   private stats!: GameStats;
 
   private readonly handleCommand = (event: Event) => {
@@ -242,6 +243,30 @@ class RunnerScene extends Phaser.Scene {
       shadowGfx.generateTexture("ground-shadow", 36, 10);
       shadowGfx.destroy();
     }
+
+    if (!this.textures.exists("shred-white")) {
+      const p1 = this.make.graphics({ x: 0, y: 0 }, false);
+      p1.fillStyle(0xffffff, 0.95);
+      p1.fillRect(0, 0, 7, 4);
+      p1.generateTexture("shred-white", 7, 4);
+      p1.destroy();
+    }
+
+    if (!this.textures.exists("shred-manila")) {
+      const p2 = this.make.graphics({ x: 0, y: 0 }, false);
+      p2.fillStyle(0xfde047, 0.95);
+      p2.fillRect(0, 0, 6, 5);
+      p2.generateTexture("shred-manila", 6, 5);
+      p2.destroy();
+    }
+
+    if (!this.textures.exists("shred-red")) {
+      const p3 = this.make.graphics({ x: 0, y: 0 }, false);
+      p3.fillStyle(0xef4444, 0.95);
+      p3.fillRect(0, 0, 8, 3);
+      p3.generateTexture("shred-red", 8, 3);
+      p3.destroy();
+    }
   }
 
   update(time: number, delta: number) {
@@ -324,7 +349,48 @@ class RunnerScene extends Phaser.Scene {
     // Gentle hover animation for air hazards
     this.animateAirHazards(time);
 
+    // Dynamic Day-to-Night Satirical Cycle
+    this.updateDayNightCycle();
+
     this.cleanupObjects();
+  }
+
+  private updateDayNightCycle() {
+    if (this.stats.status !== "playing") return;
+    const elapsedSeconds = (this.time.now - this.roundStartAt) / 1000;
+
+    if (elapsedSeconds >= 34 && this.timePhase === "sunset") {
+      this.timePhase = "night";
+      soundManager.playSiren();
+      this.showBreakingNews("🚨 ALARM SHTETËROR: Flamingoja mori sheshin, propaganda dështoi!");
+      this.transitionSkyColor(0x0f172a, 0x312e81, 0x4338ca);
+      this.player.setTint(0xff4f8b);
+    } else if (elapsedSeconds >= 14 && this.timePhase === "morning") {
+      this.timePhase = "sunset";
+      soundManager.playSiren();
+      this.showBreakingNews("🚨 NJOFTIM: Qytetarë, mos shikoni gropat, shijoni fasadat e reja!");
+      this.transitionSkyColor(0xe76f51, 0xff9e00, 0xffb703);
+    }
+  }
+
+  private transitionSkyColor(targetSky: number, backTint: number, frontTint: number) {
+    const currentSky = Phaser.Display.Color.ValueToColor(this.cameras.main.backgroundColor.color);
+    const endSky = Phaser.Display.Color.ValueToColor(targetSky);
+
+    this.tweens.addCounter({
+      from: 0,
+      to: 100,
+      duration: 2200,
+      onUpdate: (tween) => {
+        const currentVal = tween.getValue();
+        const val = typeof currentVal === "number" ? currentVal / 100 : 0;
+        const color = Phaser.Display.Color.Interpolate.ColorWithColor(currentSky, endSky, 100, val * 100);
+        this.cameras.main.setBackgroundColor(Phaser.Display.Color.GetColor(color.r, color.g, color.b));
+      },
+    });
+
+    this.cityBack?.setTint(backTint);
+    this.cityFront?.setTint(frontTint);
   }
 
   private handleLanding() {
@@ -444,19 +510,30 @@ class RunnerScene extends Phaser.Scene {
     this.player.setVelocityY(this.player.body.velocity.y * JUMP_CUT_MULTIPLIER);
   }
 
-  // --- OBSTACLE DIRECTOR (Random & Varied Pacing) ---
+  // --- OBSTACLE DIRECTOR (Smooth First 40s Curve) ---
   private scheduleObstacleDirector(overrideDelay?: number) {
     if (this.stats.status !== "playing") return;
 
+    const elapsedSeconds = (this.time.now - this.roundStartAt) / 1000;
     let nextDelay = overrideDelay;
+
     if (!nextDelay) {
-      const baseDelay = this.level.obstacleDelayMs / this.currentSpeedMultiplier();
-      const jitter = Phaser.Math.Between(-220, 260);
-      nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 780, 1600);
+      if (elapsedSeconds < 15) {
+        // 0-15s: Warmup, generous breathing room between low hurdles
+        nextDelay = Phaser.Math.Between(1650, 2150);
+      } else if (elapsedSeconds < 40) {
+        // 15-40s: Comfortable gentle pacing
+        nextDelay = Phaser.Math.Between(1450, 1850);
+      } else {
+        // 40s+: Progressive arcade challenge
+        const baseDelay = this.level.obstacleDelayMs / this.currentSpeedMultiplier();
+        const jitter = Phaser.Math.Between(-180, 220);
+        nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 900, 1500);
+      }
     }
 
-    // Scale delay by mobile viewport width and speed multiplier for fairness
-    const widthScale = Phaser.Math.Clamp(this.scale.width / 420, 0.85, 1.15);
+    // Scale delay by mobile viewport width
+    const widthScale = Phaser.Math.Clamp(this.scale.width / 420, 0.9, 1.15);
     const adjustedDelay = nextDelay * widthScale;
 
     this.spawnTimer = this.time.delayedCall(adjustedDelay, () => {
@@ -469,27 +546,51 @@ class RunnerScene extends Phaser.Scene {
     if (this.stats.status !== "playing") return;
 
     const elapsedSeconds = (this.time.now - this.roundStartAt) / 1000;
-    const canSpawnAir = this.lastSpawnCategory !== "ground_tall" && elapsedSeconds > 7;
-    const airChance = elapsedSeconds < 7 ? 0 : 0.28;
 
-    const roll = Math.random();
-
-    if (canSpawnAir && roll < airChance) {
-      this.spawnAirHazard();
-    } else {
-      // Randomly pick ground obstacle category
-      const groundRoll = Math.random();
-      if (groundRoll < 0.42) {
+    if (elapsedSeconds < 15) {
+      // 0-15s: Only easy ground hurdles (papers)
+      this.spawnGroundObstacle("ground_low");
+    } else if (elapsedSeconds < 30) {
+      // 15-30s: Mostly papers and podiums, rare ministry
+      const roll = Math.random();
+      if (roll < 0.55) {
         this.spawnGroundObstacle("ground_low");
-      } else if (groundRoll < 0.74) {
+      } else if (roll < 0.85) {
         this.spawnGroundObstacle("ground_med");
       } else {
         this.spawnGroundObstacle("ground_tall");
       }
+    } else if (elapsedSeconds < 40) {
+      // 30-40s: Balanced mix, air hazards introduced at low frequency
+      const roll = Math.random();
+      if (roll < 0.22 && this.lastSpawnCategory !== "ground_tall") {
+        this.spawnAirHazard();
+      } else if (roll < 0.60) {
+        this.spawnGroundObstacle("ground_low");
+      } else if (roll < 0.85) {
+        this.spawnGroundObstacle("ground_med");
+      } else {
+        this.spawnGroundObstacle("ground_tall");
+      }
+    } else {
+      // 40s+: Full pressure phase
+      const roll = Math.random();
+      if (roll < 0.30 && this.lastSpawnCategory !== "ground_tall") {
+        this.spawnAirHazard();
+      } else {
+        const groundRoll = Math.random();
+        if (groundRoll < 0.40) {
+          this.spawnGroundObstacle("ground_low");
+        } else if (groundRoll < 0.75) {
+          this.spawnGroundObstacle("ground_med");
+        } else {
+          this.spawnGroundObstacle("ground_tall");
+        }
+      }
     }
 
-    // 38% chance to spawn a bonus collectible in a safe trajectory
-    if (Math.random() < 0.38) {
+    // 40% chance to spawn a bonus collectible in a safe trajectory
+    if (Math.random() < 0.40) {
       this.spawnCollectibleSafeArc();
     }
   }
@@ -517,13 +618,13 @@ class RunnerScene extends Phaser.Scene {
     sprite.setActive(true).setVisible(true).setAlpha(1);
     sprite.body.allowGravity = false;
 
-    // Forgiving collision hitboxes
+    // Generous, forgiving collision hitboxes
     if (isMinistry) {
-      sprite.body.setSize(width * 0.46, height * 0.54).setOffset(width * 0.27, height * 0.4);
+      sprite.body.setSize(width * 0.42, height * 0.48).setOffset(width * 0.29, height * 0.46);
     } else if (isPodium) {
-      sprite.body.setSize(width * 0.48, height * 0.52).setOffset(width * 0.26, height * 0.4);
+      sprite.body.setSize(width * 0.44, height * 0.48).setOffset(width * 0.28, height * 0.46);
     } else {
-      sprite.body.setSize(width * 0.48, height * 0.42).setOffset(width * 0.26, height * 0.48);
+      sprite.body.setSize(width * 0.44, height * 0.38).setOffset(width * 0.28, height * 0.52);
     }
 
     sprite.setVelocityX(-speed);
@@ -605,7 +706,7 @@ class RunnerScene extends Phaser.Scene {
     collectible.setData("collected", true);
     collectible.body.enable = false;
 
-    // Cleanly animate and destroy the attached label so it never remains frozen
+    // Cleanly animate and destroy the attached label
     const binding = this.labels.get(collectible);
     if (binding) {
       this.labels.delete(collectible);
@@ -621,14 +722,19 @@ class RunnerScene extends Phaser.Scene {
       });
     }
 
+    // SHRED THE PROPAGANDA: Paper-rip particles + Red Rubber-Stamp + Audio
+    soundManager.playShredStamp();
+    this.emitPaperShreds(collectible.x, collectible.y, 16);
+    this.slamRubberStamp(collectible.x, collectible.y);
+
     // Cleanly animate and destroy the collectible sprite
     this.tweens.add({
       targets: collectible,
-      scaleX: 1.25,
-      scaleY: 1.25,
+      scaleX: 1.3,
+      scaleY: 1.3,
       alpha: 0,
       y: collectible.y - 20,
-      duration: 280,
+      duration: 250,
       ease: "Quad.easeOut",
       onComplete: () => collectible.destroy(),
     });
@@ -638,8 +744,7 @@ class RunnerScene extends Phaser.Scene {
     const score = this.stats.score + gained;
     const exposure = this.stats.exposure + 1;
 
-    // Audio & particle feedback
-    soundManager.playCollect(this.stats.combo);
+    // Sparkles & Floating Score
     this.emitSparkles(collectible.x, collectible.y, 8);
     this.floatText(collectible.x, collectible.y - 28, `+${gained}`, combo >= 3 ? "#ffd23f" : "#ffffff");
 
@@ -658,17 +763,71 @@ class RunnerScene extends Phaser.Scene {
   private takeHit(obstacle?: MovingSprite) {
     if (this.time.now < this.invulnerableUntil || this.stats.status !== "playing") return;
 
-    this.invulnerableUntil = this.time.now + INVULNERABLE_MS;
     const obstacleLabel = obstacle?.getData("label") as string | undefined;
 
-    // Audio and haptics
+    // FORGIVENESS ON FIRST HIT (lives > 1)
+    if (this.stats.lives > 1) {
+      this.invulnerableUntil = this.time.now + 1400; // 1.4s invulnerability
+      soundManager.playCrash();
+
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate([60, 40, 60]);
+      }
+
+      this.emitFeathers(this.player.x, this.player.y, 8);
+      this.cameras.main.shake(120, 0.01);
+
+      // Shatter colliding obstacle so it cannot re-collide
+      if (obstacle && obstacle.active) {
+        this.emitPaperShreds(obstacle.x, obstacle.y, 10);
+        const binding = this.labels.get(obstacle);
+        if (binding) {
+          binding.label.destroy();
+          this.labels.delete(obstacle);
+        }
+        obstacle.destroy();
+      }
+
+      // Flash player sprite during invulnerability
+      this.tweens.add({
+        targets: this.player,
+        alpha: 0.35,
+        duration: 90,
+        yoyo: true,
+        repeat: 7,
+        onComplete: () => {
+          this.player.setAlpha(1);
+          this.player.clearTint();
+        },
+      });
+
+      // Quick stumble squash & stretch
+      this.tweens.add({
+        targets: this.player,
+        scaleX: 1.18,
+        scaleY: 0.82,
+        duration: 75,
+        yoyo: true,
+      });
+
+      this.showBreakingNews("⚠️ SHPËTOVE PËR NJË QIME! (1 Jetë e mbetur)");
+      this.updateStats({
+        lives: 1,
+        combo: 1,
+        message: obstacleLabel ? `Përplasje e lehtë me ${obstacleLabel}!` : "Shpëtove për pak!",
+      });
+      return;
+    }
+
+    // FATAL HIT (lives <= 1)
+    this.invulnerableUntil = this.time.now + INVULNERABLE_MS;
     soundManager.playCrash();
     if (typeof navigator !== "undefined" && navigator.vibrate) {
       navigator.vibrate([40, 30, 90]);
     }
 
     // Burst feathers
-    this.emitFeathers(this.player.x, this.player.y, 14);
+    this.emitFeathers(this.player.x, this.player.y, 16);
 
     // Hit-stop: brief 90ms micro-pause for visceral impact punch
     this.isFrozen = true;
@@ -680,7 +839,7 @@ class RunnerScene extends Phaser.Scene {
       this.updateStats({
         lives: 0,
         combo: 1,
-        message: obstacleLabel ? `U perplase me ${obstacleLabel}` : "U perplase",
+        message: obstacleLabel ? `U përplase me ${obstacleLabel}` : "U përplase",
       });
       this.loseRound();
     });
@@ -746,6 +905,11 @@ class RunnerScene extends Phaser.Scene {
     this.jumpStartedAt = 0;
     this.wasGrounded = true;
     this.lastSpawnCategory = "ground_low";
+    this.timePhase = "morning";
+
+    this.cameras.main.setBackgroundColor(this.level.skyColor);
+    this.cityBack?.clearTint();
+    this.cityFront?.clearTint();
 
     this.player.setPosition(this.playerX(), this.playerGroundY());
     this.player.setVelocity(0, 0);
@@ -1106,6 +1270,128 @@ class RunnerScene extends Phaser.Scene {
       delay: 950,
       duration: 450,
       onComplete: () => banner.destroy(),
+    });
+  }
+
+  private emitPaperShreds(x: number, y: number, count = 16) {
+    const shredKeys = ["shred-white", "shred-manila", "shred-red"];
+    for (let i = 0; i < count; i++) {
+      const key = Phaser.Utils.Array.GetRandom(shredKeys);
+      const p = this.add.image(x, y, key);
+      p.setDepth(DEPTH_PARTICLES);
+
+      const angle = Phaser.Math.FloatBetween(-Math.PI * 0.85, -Math.PI * 0.15);
+      const speed = Phaser.Math.Between(130, 280);
+      const targetX = x + Math.cos(angle) * speed + Phaser.Math.Between(-30, 30);
+      const targetY = y + Math.sin(angle) * speed + Phaser.Math.Between(20, 90);
+
+      this.tweens.add({
+        targets: p,
+        x: targetX,
+        y: targetY,
+        angle: p.angle + Phaser.Math.Between(-360, 360),
+        alpha: 0,
+        scale: 0.3,
+        duration: Phaser.Math.Between(450, 750),
+        ease: "Quad.easeOut",
+        onComplete: () => p.destroy(),
+      });
+    }
+  }
+
+  private slamRubberStamp(x: number, y: number) {
+    const stamps = [
+      "GËNJESHTËR!",
+      "TENDER ME 1 OFERTË!",
+      "FASADË TOTAL!",
+      "PUNËTORË IMAGJINARË!",
+      "KUSHËRIRI FITON!",
+      "PDF I SKANUAR!",
+      "ORA PA BATERI!",
+      "SPORTELI MBYLLUR!",
+      "KONSULTIM I FSHUR!",
+      "SKANDAL TOTAL!",
+    ];
+    const text = Phaser.Utils.Array.GetRandom(stamps);
+    const tilt = Phaser.Math.Between(-12, 12);
+    const clampedX = Phaser.Math.Clamp(x, 140, this.scale.width - 140);
+
+    const stamp = this.add
+      .text(clampedX, Math.max(74, y - 48), `[ ${text} ]`, {
+        color: "#ff2a4b",
+        fontFamily: "Outfit, Arial Black, sans-serif",
+        fontSize: "18px",
+        fontStyle: "900",
+        stroke: "#ffffff",
+        strokeThickness: 3,
+        backgroundColor: "rgba(16, 19, 29, 0.88)",
+        padding: { x: 8, y: 4 },
+      })
+      .setOrigin(0.5)
+      .setAngle(tilt)
+      .setScale(2.2)
+      .setAlpha(0)
+      .setDepth(DEPTH_LABEL + 10);
+
+    // Snappy rubber-stamp slam
+    this.tweens.add({
+      targets: stamp,
+      scaleX: 1,
+      scaleY: 1,
+      alpha: 1,
+      duration: 85,
+      ease: "Back.easeOut",
+      onComplete: () => {
+        this.cameras.main.shake(60, 0.005);
+        this.tweens.add({
+          targets: stamp,
+          alpha: 0,
+          y: stamp.y - 20,
+          delay: 450,
+          duration: 350,
+          ease: "Quad.easeIn",
+          onComplete: () => stamp.destroy(),
+        });
+      },
+    });
+  }
+
+  private showBreakingNews(headline: string) {
+    const banner = this.add
+      .text(this.scale.width / 2, Math.max(54, this.scale.height * 0.12), headline, {
+        align: "center",
+        backgroundColor: "#ffd23f",
+        color: "#10131d",
+        fixedWidth: Math.min(390, this.scale.width - 24),
+        fontFamily: "Outfit, sans-serif",
+        fontSize: "12px",
+        fontStyle: "900",
+        padding: { x: 10, y: 6 },
+        wordWrap: { width: Math.min(370, this.scale.width - 44) },
+      })
+      .setOrigin(0.5)
+      .setDepth(DEPTH_BANNER + 5)
+      .setAlpha(0)
+      .setScale(0.9);
+
+    this.tweens.add({
+      targets: banner,
+      alpha: 1,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 180,
+      ease: "Back.easeOut",
+      onComplete: () => {
+        this.tweens.add({
+          targets: banner,
+          alpha: 0,
+          y: banner.y - 15,
+          delay: 2400,
+          duration: 400,
+          ease: "Quad.easeIn",
+          onComplete: () => banner.destroy(),
+        });
+      },
     });
   }
 

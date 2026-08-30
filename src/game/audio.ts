@@ -23,7 +23,9 @@ class SoundManager {
       return this.ctx;
     }
     try {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
       }
@@ -104,7 +106,6 @@ class SoundManager {
     const freq1 = basePitches[pitchIndex];
     const freq2 = basePitches[pitchIndex + 1];
 
-    // Play 2 quick harmonious notes
     const osc1 = ctx.createOscillator();
     const osc2 = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -129,6 +130,80 @@ class SoundManager {
     osc2.stop(now + 0.23);
   }
 
+  // Paper rip + comic rubber-stamp slam
+  public playShredStamp() {
+    if (this.isMuted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+
+    // 1. Noise burst (paper rip)
+    const bufferSize = ctx.sampleRate * 0.08;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = "highpass";
+    noiseFilter.frequency.value = 1200;
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.25, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noise.start(now);
+
+    // 2. Heavy rubber stamp slam (low thud)
+    const thud = ctx.createOscillator();
+    const thudGain = ctx.createGain();
+
+    thud.type = "triangle";
+    thud.frequency.setValueAtTime(180, now + 0.02);
+    thud.frequency.exponentialRampToValueAtTime(45, now + 0.16);
+
+    thudGain.gain.setValueAtTime(0.28, now + 0.02);
+    thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+    thud.connect(thudGain);
+    thudGain.connect(ctx.destination);
+
+    thud.start(now + 0.02);
+    thud.stop(now + 0.17);
+  }
+
+  // Comic regime siren when day turns to sunset or night
+  public playSiren() {
+    if (this.isMuted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.linearRampToValueAtTime(750, now + 0.18);
+    osc.frequency.linearRampToValueAtTime(400, now + 0.36);
+
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.39);
+  }
+
   public playCrash() {
     if (this.isMuted) return;
     const ctx = this.getContext();
@@ -136,7 +211,6 @@ class SoundManager {
 
     const now = ctx.currentTime;
 
-    // Low square buzz + noise burst for impact
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
