@@ -1033,8 +1033,8 @@ class RunnerScene extends Phaser.Scene {
       }
     }
 
-    // 40% chance to spawn a bonus collectible in a safe trajectory
-    if (Math.random() < 0.40) {
+    // 65% chance to spawn a collectible / antagonist in a safe jumping arc
+    if (Math.random() < 0.65) {
       this.spawnCollectibleSafeArc();
     }
   }
@@ -1590,8 +1590,9 @@ class RunnerScene extends Phaser.Scene {
 
   private nextCollectibleTarget(): CollectibleTarget {
     const roll = Math.random();
-    if (roll < 0.28) return this.nextDocument();
-    if (roll < 0.46) return this.nextPolitikan();
+    // 45% politicians (with heavy weight on Rama & Berisha), 25% documents, 30% slogans
+    if (roll < 0.45) return this.nextPolitikan();
+    if (roll < 0.70) return this.nextDocument();
     return this.nextZbulim();
   }
 
@@ -1602,6 +1603,11 @@ class RunnerScene extends Phaser.Scene {
 
   private nextPolitikan() {
     const list = this.level.politikanet;
+    const antagonists = list.filter((p) => p.antagonist === "edi" || p.antagonist === "sali");
+    // 65% chance to specifically pick Edi Rama or Sali Berisha so they get caged often!
+    if (antagonists.length > 0 && Math.random() < 0.65) {
+      return antagonists[Phaser.Math.Between(0, antagonists.length - 1)];
+    }
     return list[Phaser.Math.Between(0, list.length - 1)];
   }
 
