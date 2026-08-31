@@ -193,7 +193,7 @@ export default function App() {
             {stats.status === "ready" ? (
               <div className="brand-logo-container">
                 <img
-                  src={`${import.meta.env.BASE_URL}assets/logo final eu.svg`}
+                  src={`${import.meta.env.BASE_URL}assets/logo-final-eu.svg`}
                   alt="Flamingo e Fundit"
                   className="brand-logo-hero"
                 />

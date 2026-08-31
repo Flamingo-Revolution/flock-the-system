@@ -7,6 +7,6 @@ const isProjectPage = Boolean(
 );
 
 export default defineConfig({
-  base: isProjectPage ? `/${repoName}/` : "/",
+  base: process.env.BASE_URL || (isProjectPage ? `/${repoName}/` : "./"),
   plugins: [react()],
 });
