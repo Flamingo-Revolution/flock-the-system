@@ -500,9 +500,9 @@ export default function App() {
 
       {/* Protest Rules Modal */}
       {isRulesModalOpen ? (
-        <aside className="stage-drawer" aria-label="Rregullat">
+        <aside className="stage-drawer" aria-label="Rregullat e Lojës">
           <div className="stage-drawer-header">
-            <h2>Rregullat e Revolucionit</h2>
+            <h2>📜 Rregullat e Revolucionit</h2>
             <button
               type="button"
               className="drawer-close-btn"
@@ -512,10 +512,50 @@ export default function App() {
             </button>
           </div>
           <div className="rules-content">
-            <p>🦩 <strong>Flamingoja nuk ndalet:</strong> Kliko ekranin ose shtyp <code>Space</code> / <code>W</code> / <code>↑</code> për të kërcyer.</p>
-            <p>💥 <strong>Gris Propagandën:</strong> Kërce në sloganet fluturuese dhe kap deputetët arrogantë për të zbuluar të vërtetat e fshehura.</p>
-            <p>🪶 <strong>Shpëto për një qime:</strong> Flamingoja ka 2 jetë – përplasja e parë të jep imunitet të përkohshëm!</p>
-            <p>☀️ <strong>Cikli i Ditës:</strong> Mëngjesi kthehet në Perëndim, pastaj në Natë me drone, dhe agimi rinis sërish!</p>
+            <div className="rule-card">
+              <span className="rule-badge">🦩 KËRCIMI & DOUBLE JUMP</span>
+              <p>
+                Kliko ekranin ose shtyp <code>Space</code> / <code>W</code> / <code>↑</code> për të kërcyer.
+                <strong> Kliko sërish në ajër</strong> për të kryer kërcimin e dytë me hapje krahësh (*Double Jump*)!
+              </p>
+            </div>
+
+            <div className="rule-card">
+              <span className="rule-badge">🌯 SUPER-FUQITË (POWER-UPS)</span>
+              <ul className="rule-list">
+                <li>☕ <strong>Makiato Turbo:</strong> Shpejtësi e lartë që shpartallon çdo pengesë me konfeti (+100 pikë).</li>
+                <li>🛡️ <strong>Sufllaqe Mburojë:</strong> Kthen 2 jetët e plota (🪶🪶) dhe absorbon 100% goditjen e parë pa humbur jetë.</li>
+                <li>🧲 <strong>Koncesioni Magnetik:</strong> Thith automatikisht të gjitha dosjet dhe sloganet nga largësia.</li>
+              </ul>
+            </div>
+
+            <div className="rule-card">
+              <span className="rule-badge">⭐ DOSJET E ARTA NË LARTËSI</span>
+              <p>
+                Kap dosjet sekrete të arta që fluturojnë lart në qiell duke përdorur <strong>Double Jump</strong> për të fituar <strong>+300 Pikë Bonus</strong>!
+              </p>
+            </div>
+
+            <div className="rule-card">
+              <span className="rule-badge">🏛️ SPAK: RAMA & BERISHA N'BURG</span>
+              <p>
+                Kap Ramën ose Berishën kur shfaqen për t'i futur në kafaz me vulën <em>RNBNB!</em> Nëse i fut të dy në burg brenda një marshimi, fiton <strong>+1000 Pikë</strong>!
+              </p>
+            </div>
+
+            <div className="rule-card">
+              <span className="rule-badge">⚠️ RREZIQET E SHESHIT</span>
+              <p>
+                Kujdes nga 🚓 <strong>Furgoni i Propagandës</strong> që vërshon me shpejtësi pas shenjës <code>⚠️</code>, dhe 💨 <strong>Gazi Lotësjellës</strong> që bie nga qielli!
+              </p>
+            </div>
+
+            <div className="rule-card">
+              <span className="rule-badge">⌨️ TASTET E SHPEJTA</span>
+              <p>
+                <code>Space</code> / <code>W</code> / <code>↑</code>: Kërce & Double Jump &nbsp;|&nbsp; <code>P</code>: Pauzë &nbsp;|&nbsp; <code>R</code>: Rinisje &nbsp;|&nbsp; <code>M</code>: Zëri
+              </p>
+            </div>
           </div>
         </aside>
       ) : null}
