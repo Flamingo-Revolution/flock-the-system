@@ -114,6 +114,7 @@ class RunnerScene extends Phaser.Scene {
   private timePhase: "morning" | "sunset" | "night" = "morning";
   private cagedEdi = false;
   private cagedSali = false;
+  private bothAntagonistsBonusAwarded = false;
   private bossChaseSprite?: Phaser.GameObjects.Image;
   private bossChaseBubble?: Phaser.GameObjects.Text;
   private bossChaseActive = false;
@@ -228,9 +229,15 @@ class RunnerScene extends Phaser.Scene {
     });
     this.input.on("pointerup", () => this.releaseJump());
     window.addEventListener(GAME_COMMAND_EVENT, this.handleCommand);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    const onResize = () => this.handleResize();
+    this.scale.on(Phaser.Scale.Events.RESIZE, onResize);
+
+    const cleanup = () => {
       window.removeEventListener(GAME_COMMAND_EVENT, this.handleCommand);
-    });
+      this.scale.off(Phaser.Scale.Events.RESIZE, onResize);
+    };
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+    this.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
 
     this.physics.add.overlap(this.player, this.obstacles, (_, obstacle) => {
       this.takeHit(obstacle as MovingSprite);
@@ -239,7 +246,6 @@ class RunnerScene extends Phaser.Scene {
       this.collectTarget(collectible as MovingSprite);
     });
 
-    this.scale.on(Phaser.Scale.Events.RESIZE, () => this.handleResize());
     this.addBanner(this.level.intro);
     this.callbacks.onStatsChange(this.stats);
   }
@@ -604,7 +610,8 @@ class RunnerScene extends Phaser.Scene {
     const seconds = delta / 1000;
     const speed = this.currentSpeed();
 
-    // Move existing scenery items
+    // Move existing scenery items safely without mutating array during iteration
+    const toRemove: Phaser.GameObjects.Image[] = [];
     this.sceneryGroup?.getChildren().forEach((child) => {
       const sprite = child as Phaser.GameObjects.Image;
       const speedMult = (sprite.getData("speedMult") as number) || 1.0;
@@ -616,9 +623,14 @@ class RunnerScene extends Phaser.Scene {
       }
 
       if (sprite.x < -140) {
-        bindingText?.destroy();
-        this.sceneryGroup.remove(sprite, true, true);
+        toRemove.push(sprite);
       }
+    });
+
+    toRemove.forEach((sprite) => {
+      const bindingText = sprite.getData("bindingText") as Phaser.GameObjects.Text | undefined;
+      bindingText?.destroy();
+      this.sceneryGroup.remove(sprite, true, true);
     });
 
     if (this.stats.status !== "playing") return;
@@ -925,6 +937,7 @@ class RunnerScene extends Phaser.Scene {
     if (!this.canJump()) return;
 
     this.jumpBufferedUntil = 0;
+    this.lastGroundedAt = 0; // Consume coyote time immediately upon jump launch
     this.jumpStartedAt = this.time.now;
     this.player.body.allowGravity = true;
     this.player.setVelocityY(this.level.jumpVelocity);
@@ -1199,6 +1212,7 @@ class RunnerScene extends Phaser.Scene {
     }
 
     const isAntagonist = "antagonist" in target && (target.antagonist === "edi" || target.antagonist === "sali");
+    let combinationBonus = 0;
 
     if (isAntagonist) {
       const antagonistType = (target as PersonObstacle).antagonist!;
@@ -1220,8 +1234,10 @@ class RunnerScene extends Phaser.Scene {
       // Repel boss chase if currently active
       this.endBossChase(true);
 
-      // Check if both have been caged in this run
-      if (this.cagedEdi && this.cagedSali) {
+      // Check if both have been caged in this run (trigger bonus only once per run)
+      if (this.cagedEdi && this.cagedSali && !this.bothAntagonistsBonusAwarded) {
+        this.bothAntagonistsBonusAwarded = true;
+        combinationBonus = 1000;
         soundManager.playWin();
         triggerHaptic([40, 30, 40, 30, 60]);
         this.showBreakingNews("🏛️ SPAK: EDI DHE SALI U FUTËN NË BURG! RNBNB! (+1000 Pikë)");
@@ -1248,7 +1264,7 @@ class RunnerScene extends Phaser.Scene {
 
     const combo = Math.min(this.stats.combo + 1, 5);
     const gained = target.pike * this.stats.combo;
-    const score = this.stats.score + gained + (isAntagonist && this.cagedEdi && this.cagedSali ? 1000 : 0);
+    const score = this.stats.score + gained + combinationBonus;
     const exposure = this.stats.exposure + 1;
 
     // Sparkles & Floating Score
@@ -1426,6 +1442,7 @@ class RunnerScene extends Phaser.Scene {
     this.timePhase = "morning";
     this.cagedEdi = false;
     this.cagedSali = false;
+    this.bothAntagonistsBonusAwarded = false;
     this.endBossChase(false);
 
     this.sceneryGroup?.getChildren().forEach((child) => {
@@ -1502,7 +1519,8 @@ class RunnerScene extends Phaser.Scene {
   }
 
   private cleanupGroup(group: Phaser.Physics.Arcade.Group, missedCollectible: boolean) {
-    group.getChildren().forEach((child) => {
+    const children = [...group.getChildren()];
+    children.forEach((child) => {
       const sprite = child as MovingSprite;
 
       if (
@@ -1555,8 +1573,16 @@ class RunnerScene extends Phaser.Scene {
       };
       shiftGroup(this.obstacles);
       shiftGroup(this.collectibles);
+
+      this.sceneryGroup?.getChildren().forEach((child) => {
+        const sprite = child as Phaser.GameObjects.Image;
+        sprite.y += deltaY;
+        const bindingText = sprite.getData("bindingText") as Phaser.GameObjects.Text | undefined;
+        if (bindingText) bindingText.y += deltaY;
+      });
     }
 
+    this.playerShadow?.setPosition(this.playerX(), newGroundTop + 2);
     this.player?.setPosition(this.playerX(), Math.min(this.player.y + deltaY, this.playerGroundY()));
     this.cityBack.setSize(width, 208).setPosition(0, height - 238);
     this.cityFront.setSize(width, 208).setPosition(0, height - 190);

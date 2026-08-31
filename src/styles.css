@@ -546,6 +546,31 @@ button:disabled {
   font-weight: 700;
 }
 
+@media (max-width: 380px) {
+  .hud-pill {
+    padding: 4px 8px;
+    gap: 5px;
+  }
+
+  .stat-val {
+    font-size: 0.85rem;
+  }
+
+  .stat-label {
+    font-size: 0.46rem;
+  }
+
+  .hud-actions {
+    gap: 4px;
+  }
+
+  .hud-action-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 0.95rem;
+  }
+}
+
 @media (min-width: 760px) {
   .mobile-hud {
     top: 14px;

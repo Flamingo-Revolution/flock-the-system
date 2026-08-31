@@ -26,9 +26,15 @@ export default function App() {
     message: selectedLevel.intro,
   });
   const [bestScore, setBestScore] = useState(() => {
-    const storedBestScore = Number(window.localStorage.getItem(BEST_SCORE_KEY) ?? 0);
-    bestScoreRef.current = storedBestScore;
-    return storedBestScore;
+    try {
+      const stored = Number(window.localStorage.getItem(BEST_SCORE_KEY) ?? 0);
+      const val = Number.isFinite(stored) ? stored : 0;
+      bestScoreRef.current = val;
+      return val;
+    } catch {
+      bestScoreRef.current = 0;
+      return 0;
+    }
   });
 
   const [shareToast, setShareToast] = useState<string | null>(null);
@@ -94,7 +100,11 @@ export default function App() {
         if (nextStats.score > bestScoreRef.current) {
           bestScoreRef.current = nextStats.score;
           setBestScore(nextStats.score);
-          window.localStorage.setItem(BEST_SCORE_KEY, String(nextStats.score));
+          try {
+            window.localStorage.setItem(BEST_SCORE_KEY, String(nextStats.score));
+          } catch {
+            // Ignore restricted storage errors
+          }
         }
       },
       onLevelComplete(levelId, finalScore) {
