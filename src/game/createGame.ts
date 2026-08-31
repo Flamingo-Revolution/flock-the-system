@@ -68,10 +68,13 @@ function createInitialStats(level: LevelDefinition): GameStats {
     levelName: level.name,
     score: 0,
     exposure: 0,
+    targetExposure: level.targetExposure,
+    progress: 0,
     lives: 2, // 2 lives: 1 stumble grace + 1 fatal hit
     combo: 1,
     status: "ready",
     message: level.intro,
+    isEndless: false,
   };
 }
 
@@ -115,6 +118,17 @@ class RunnerScene extends Phaser.Scene {
   private cagedEdi = false;
   private cagedSali = false;
   private bothAntagonistsBonusAwarded = false;
+  private finishSpawned = false;
+  private isEndless = false;
+  private jumpsRemaining = 2;
+  private powerups!: Phaser.Physics.Arcade.Group;
+  private nextPowerupAt = 10000;
+  private activePowerUpType?: "makiato" | "shield" | "magnet";
+  private powerUpExpiresAt = 0;
+  private powerUpDurationMs = 0;
+  private shieldBubble?: Phaser.GameObjects.Image;
+  private goldenSkinEnabled = false;
+  private flockSprites: Phaser.GameObjects.Image[] = [];
   private bossChaseSprite?: Phaser.GameObjects.Image;
   private bossChaseBubble?: Phaser.GameObjects.Text;
   private bossChaseActive = false;
@@ -130,6 +144,8 @@ class RunnerScene extends Phaser.Scene {
     if (command === "start") this.requestJump();
     if (command === "pause") this.togglePause();
     if (command === "restart") this.resetRound("playing");
+    if (command === "continue_endless") this.continueEndlessMode();
+    if (command === "toggle_golden_skin") this.toggleGoldenSkin();
   };
 
   constructor(
@@ -198,6 +214,7 @@ class RunnerScene extends Phaser.Scene {
     this.sceneryGroup = this.add.group();
     this.obstacles = this.physics.add.group();
     this.collectibles = this.physics.add.group();
+    this.powerups = this.physics.add.group();
 
     // Ground shadow for player
     this.playerShadow = this.add.image(this.playerX(), this.groundTop + 2, "ground-shadow");
@@ -244,6 +261,9 @@ class RunnerScene extends Phaser.Scene {
     });
     this.physics.add.overlap(this.player, this.collectibles, (_, collectible) => {
       this.collectTarget(collectible as MovingSprite);
+    });
+    this.physics.add.overlap(this.player, this.powerups, (_, powerup) => {
+      this.collectPowerUp(powerup as MovingSprite);
     });
 
     this.addBanner(this.level.intro);
@@ -489,6 +509,120 @@ class RunnerScene extends Phaser.Scene {
       b.generateTexture("neon-billboard", 80, 44);
       b.destroy();
     }
+
+    if (!this.textures.exists("finish-gate")) {
+      const g = this.make.graphics({ x: 0, y: 0 }, false);
+      // Ministry Victory Arch
+      g.fillStyle(0x1e293b, 1);
+      g.fillRoundedRect(0, 0, 110, 160, 8);
+      // Archway opening
+      g.fillStyle(0x93e4ef, 1);
+      g.fillRoundedRect(18, 44, 74, 116, 37);
+      // Gold Pediment
+      g.fillStyle(0xffd23f, 1);
+      g.fillRect(8, 0, 94, 16);
+      g.fillTriangle(55, -16, 0, 0, 110, 0);
+      // Red Banners
+      g.fillStyle(0xff2a4b, 1);
+      g.fillRect(4, 24, 12, 80);
+      g.fillRect(94, 24, 12, 80);
+      // Gold Star Emblem
+      g.fillStyle(0xffd23f, 1);
+      g.fillCircle(55, 12, 6);
+      g.generateTexture("finish-gate", 110, 160);
+      g.destroy();
+    }
+
+    if (!this.textures.exists("finish-ribbon")) {
+      const r = this.make.graphics({ x: 0, y: 0 }, false);
+      r.fillStyle(0xff2a4b, 1);
+      r.fillRoundedRect(0, 4, 96, 24, 4);
+      r.fillStyle(0xffd23f, 1);
+      r.fillRect(0, 14, 96, 4);
+      r.generateTexture("finish-ribbon", 96, 32);
+      r.destroy();
+    }
+
+    if (!this.textures.exists("gold-confetti")) {
+      const c = this.make.graphics({ x: 0, y: 0 }, false);
+      c.fillStyle(0xffd23f, 1);
+      c.fillRect(0, 0, 8, 5);
+      c.generateTexture("gold-confetti", 8, 5);
+      c.destroy();
+    }
+
+    if (!this.textures.exists("powerup-makiato")) {
+      const p = this.make.graphics({ x: 0, y: 0 }, false);
+      p.fillStyle(0x0f172a, 0.95);
+      p.fillCircle(19, 19, 18);
+      p.lineStyle(2, 0xff4f8b, 1);
+      p.strokeCircle(19, 19, 18);
+      // Cup & Handle
+      p.fillStyle(0xffd23f, 1);
+      p.fillRoundedRect(10, 14, 16, 14, 3);
+      p.lineStyle(2, 0xffd23f, 1);
+      p.strokeCircle(27, 20, 4);
+      // Steam
+      p.lineStyle(2, 0xff4f8b, 1);
+      p.lineBetween(13, 11, 15, 6);
+      p.lineBetween(19, 11, 21, 5);
+      p.lineBetween(23, 11, 25, 7);
+      p.generateTexture("powerup-makiato", 38, 38);
+      p.destroy();
+    }
+
+    if (!this.textures.exists("powerup-sufllaqe")) {
+      const p = this.make.graphics({ x: 0, y: 0 }, false);
+      p.fillStyle(0x0f172a, 0.95);
+      p.fillCircle(19, 19, 18);
+      p.lineStyle(2, 0x06d6a0, 1);
+      p.strokeCircle(19, 19, 18);
+      // Wrap
+      p.fillStyle(0xfde047, 1);
+      p.fillRoundedRect(10, 10, 18, 18, 4);
+      p.fillStyle(0xef4444, 1);
+      p.fillRect(14, 10, 10, 5);
+      p.generateTexture("powerup-sufllaqe", 38, 38);
+      p.destroy();
+    }
+
+    if (!this.textures.exists("powerup-magnet")) {
+      const p = this.make.graphics({ x: 0, y: 0 }, false);
+      p.fillStyle(0x0f172a, 0.95);
+      p.fillCircle(19, 19, 18);
+      p.lineStyle(2, 0x38bdf8, 1);
+      p.strokeCircle(19, 19, 18);
+      // Horseshoe Magnet
+      p.fillStyle(0xef4444, 1);
+      p.fillRect(10, 11, 6, 16);
+      p.fillRect(22, 11, 6, 16);
+      p.fillRect(10, 23, 18, 5);
+      p.fillStyle(0xffffff, 1);
+      p.fillRect(10, 11, 6, 4);
+      p.fillRect(22, 11, 6, 4);
+      p.generateTexture("powerup-magnet", 38, 38);
+      p.destroy();
+    }
+
+    if (!this.textures.exists("shield-bubble")) {
+      const s = this.make.graphics({ x: 0, y: 0 }, false);
+      // Outer bright neon ring
+      s.lineStyle(3, 0x06d6a0, 0.95);
+      s.strokeCircle(38, 38, 36);
+      // Inner subtle glow ring
+      s.lineStyle(1.5, 0xffffff, 0.85);
+      s.strokeCircle(38, 38, 32);
+      // Translucent protective field
+      s.fillStyle(0x06d6a0, 0.28);
+      s.fillCircle(38, 38, 36);
+      // Little energetic spark dots
+      s.fillStyle(0xffffff, 0.9);
+      s.fillCircle(14, 20, 2);
+      s.fillCircle(62, 54, 2);
+      s.fillCircle(58, 22, 2.5);
+      s.generateTexture("shield-bubble", 76, 76);
+      s.destroy();
+    }
   }
 
   update(time: number, delta: number) {
@@ -558,6 +692,7 @@ class RunnerScene extends Phaser.Scene {
 
     // Kinesthetic jump tilt rotation
     if (currentlyGrounded) {
+      this.jumpsRemaining = 2; // Reset double-jump counter
       this.animateRun(time);
       this.player.setAngle(0);
     } else {
@@ -566,6 +701,44 @@ class RunnerScene extends Phaser.Scene {
       // Ascending: tilt upwards (-12°), Descending: tilt forward (+18°)
       const targetAngle = Phaser.Math.Clamp(vy * 0.032, -14, 22);
       this.player.setAngle(targetAngle);
+    }
+
+    // Active Power-Up Effects & Countdown
+    if (this.activePowerUpType) {
+      const remainingMs = Math.max(0, this.powerUpExpiresAt - time);
+      if (remainingMs <= 0) {
+        this.deactivatePowerUp();
+      } else {
+        // Makiato flame trail
+        if (this.activePowerUpType === "makiato" && Math.random() < 0.45) {
+          this.emitSparkles(this.player.x - 14, this.player.y + 6, 2);
+        }
+
+        // Magnet: Pull collectibles towards the player
+        if (this.activePowerUpType === "magnet") {
+          this.collectibles.getChildren().forEach((child) => {
+            const c = child as MovingSprite;
+            const dx = this.player.x - c.x;
+            const dy = this.player.y - c.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < 340) {
+              c.x += (dx / dist) * 240 * seconds;
+              c.y += (dy / dist) * 240 * seconds;
+            }
+          });
+        }
+      }
+    }
+
+    // Update Shield Bubble position
+    if (this.shieldBubble && this.shieldBubble.active) {
+      this.shieldBubble.setPosition(this.player.x, this.player.y);
+    }
+
+    // Spawn periodic powerups in the safe arc
+    if (this.stats.status === "playing" && time >= this.nextPowerupAt) {
+      this.nextPowerupAt = time + Phaser.Math.Between(13000, 20000);
+      this.spawnPowerup();
     }
 
     // Gentle hover animation for air hazards
@@ -580,6 +753,9 @@ class RunnerScene extends Phaser.Scene {
         this.bossChaseBubble.y = this.bossChaseSprite.y - 42;
       }
     }
+
+    // Update growing revolutionary companion flock
+    this.updateFlock(time, delta);
 
     // Dynamic Day-to-Night Satirical Cycle
     this.updateDayNightCycle();
@@ -752,20 +928,20 @@ class RunnerScene extends Phaser.Scene {
       soundManager.playSiren();
       this.showBreakingNews("🚨 ALARM SHTETËROR: Flamingoja mori sheshin, propaganda dështoi!");
       this.transitionSkyColor(0x0f172a, 0x312e81, 0x4338ca);
-      this.player.setTint(0xff4f8b);
+      this.refreshPlayerTint();
       this.startBossChase();
     } else if (cycleSeconds >= 20 && cycleSeconds < 40 && this.timePhase !== "sunset") {
       this.timePhase = "sunset";
       soundManager.playSiren();
       this.showBreakingNews("🚨 NJOFTIM: Deputetët kërkojnë të mos shikohen çadrat e protestës!");
       this.transitionSkyColor(0xe76f51, 0xff9e00, 0xffb703);
-      this.player.clearTint();
+      this.refreshPlayerTint();
       this.endBossChase(false);
     } else if (cycleSeconds < 20 && this.timePhase !== "morning" && elapsedSeconds > 5) {
       this.timePhase = "morning";
       this.showBreakingNews("☀️ AGIMI I PROTESTËS: Sheshi mbushet sërish me qytetarë!");
       this.transitionSkyColor(0x93e4ef, 0xffffff, 0xffffff);
-      this.player.clearTint();
+      this.refreshPlayerTint();
       this.endBossChase(false);
     }
   }
@@ -913,6 +1089,7 @@ class RunnerScene extends Phaser.Scene {
     this.roundStartAt = this.time.now;
     this.lastGroundedAt = this.time.now;
     this.lastSpawnCategory = "ground_low";
+    this.nextPowerupAt = this.time.now + 6000;
     this.player.body.allowGravity = true;
     this.updateStats({ status: "playing", message: this.level.objective });
 
@@ -927,6 +1104,7 @@ class RunnerScene extends Phaser.Scene {
   }
 
   private requestJump() {
+    soundManager.resumeIfSuspended();
     this.jumpBufferedUntil = this.time.now + JUMP_BUFFER_MS;
     this.startOrJump();
   }
@@ -934,28 +1112,54 @@ class RunnerScene extends Phaser.Scene {
   private tryBufferedJump() {
     if (this.stats.status !== "playing") return;
     if (this.jumpBufferedUntil < this.time.now) return;
-    if (!this.canJump()) return;
 
-    this.jumpBufferedUntil = 0;
-    this.lastGroundedAt = 0; // Consume coyote time immediately upon jump launch
-    this.jumpStartedAt = this.time.now;
-    this.player.body.allowGravity = true;
-    this.player.setVelocityY(this.level.jumpVelocity);
-    this.player.setTexture("flamingo-a");
+    // 1. FIRST JUMP (Grounded or Coyote Time window)
+    if (this.canJump()) {
+      this.jumpBufferedUntil = 0;
+      this.lastGroundedAt = 0; // Consume coyote time immediately
+      this.jumpsRemaining = 1;
+      this.jumpStartedAt = this.time.now;
+      this.player.body.allowGravity = true;
+      this.player.setVelocityY(this.level.jumpVelocity);
+      this.player.setTexture("flamingo-a");
 
-    soundManager.playJump();
-    triggerHaptic(15);
-    this.emitDust(this.player.x, this.groundTop - 2, 5);
+      soundManager.playJump();
+      triggerHaptic(15);
+      this.emitDust(this.player.x, this.groundTop - 2, 5);
 
-    // Jump launch squash and stretch
-    this.tweens.add({
-      targets: this.player,
-      scaleX: 0.88,
-      scaleY: 1.14,
-      duration: 80,
-      yoyo: true,
-      ease: "Quad.easeOut",
-    });
+      // Jump launch squash and stretch
+      this.tweens.add({
+        targets: this.player,
+        scaleX: 0.88,
+        scaleY: 1.14,
+        duration: 80,
+        yoyo: true,
+        ease: "Quad.easeOut",
+      });
+      return;
+    }
+
+    // 2. DOUBLE JUMP (Mid-air wing flap & glide)
+    if (this.jumpsRemaining > 0 && !this.isGrounded()) {
+      this.jumpBufferedUntil = 0;
+      this.jumpsRemaining = 0;
+      this.jumpStartedAt = this.time.now;
+      this.player.body.allowGravity = true;
+      this.player.setVelocityY(this.level.jumpVelocity * 0.88);
+
+      soundManager.playDoubleJump();
+      triggerHaptic([15, 20]);
+      this.emitFeathers(this.player.x, this.player.y + 12, 6);
+      this.emitSparkles(this.player.x, this.player.y, 6);
+
+      // Wing flap tilt animation
+      this.tweens.add({
+        targets: this.player,
+        angle: -18,
+        duration: 90,
+        yoyo: true,
+      });
+    }
   }
 
   private releaseJump() {
@@ -968,6 +1172,17 @@ class RunnerScene extends Phaser.Scene {
   // --- OBSTACLE DIRECTOR (Fair & Rhythmic Arcade Spacing) ---
   private scheduleObstacleDirector(overrideDelay?: number) {
     if (this.stats.status !== "playing") return;
+
+    // Victory Finish Gate trigger
+    if (
+      this.stats.exposure >= this.level.targetExposure &&
+      !this.finishSpawned &&
+      !this.isEndless
+    ) {
+      this.finishSpawned = true;
+      this.spawnFinishGate();
+      return;
+    }
 
     const elapsedSeconds = (this.time.now - this.roundStartAt) / 1000;
     let nextDelay = overrideDelay;
@@ -1167,6 +1382,152 @@ class RunnerScene extends Phaser.Scene {
     }
   }
 
+  private spawnPowerup() {
+    if (this.stats.status !== "playing") return;
+
+    const types: Array<"makiato" | "shield" | "magnet"> = ["makiato", "shield", "magnet"];
+    const type = Phaser.Utils.Array.GetRandom(types);
+    const textureKey = `powerup-${type}`;
+
+    const speed = this.currentSpeed();
+    const x = this.scale.width + Phaser.Math.Between(60, 110);
+    const y = this.groundTop - Phaser.Math.Between(48, 88);
+
+    const sprite = this.physics.add.image(x, y, textureKey) as MovingSprite;
+    this.powerups.add(sprite);
+
+    sprite.setDisplaySize(42, 42);
+    sprite.setSize(38, 38);
+    sprite.body.allowGravity = false;
+    sprite.setVelocityX(-speed);
+    sprite.setDepth(DEPTH_COLLECTIBLE + 4);
+    sprite.setData("type", type);
+
+    // Gentle float bobbing tween
+    this.tweens.add({
+      targets: sprite,
+      y: y - 8,
+      duration: 550,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+  }
+
+  private collectPowerUp(powerup: MovingSprite) {
+    if (!powerup.active) return;
+    const type = powerup.getData("type") as "makiato" | "shield" | "magnet";
+    powerup.destroy();
+
+    soundManager.playPowerup();
+    triggerHaptic([30, 40, 50]);
+    this.emitSparkles(this.player.x, this.player.y, 14);
+
+    if (type === "makiato") {
+      this.floatText(this.player.x, this.player.y - 30, "⚡ MAKIATO TURBO!", "#ff4f8b");
+      this.activatePowerUp("makiato", 4500);
+    } else if (type === "shield") {
+      this.floatText(this.player.x, this.player.y - 30, "🛡️ SUFLLAQE MBUROJË (ABSORBIM)!", "#06d6a0");
+      this.activatePowerUp("shield", 20000);
+    } else if (type === "magnet") {
+      this.floatText(this.player.x, this.player.y - 30, "🧲 MAGNET SLOGANESH!", "#38bdf8");
+      this.activatePowerUp("magnet", 6000);
+    }
+  }
+
+  private activatePowerUp(type: "makiato" | "shield" | "magnet", durationMs: number) {
+    this.activePowerUpType = type;
+    this.powerUpDurationMs = durationMs;
+    this.powerUpExpiresAt = this.time.now + durationMs;
+
+    if (type === "makiato") {
+      soundManager.playTurbo();
+      this.player.setTint(0xff4f8b);
+      this.showBreakingNews("☕ MAKIATO E DYFISHTË: TURBO DASH I PATHYESHËM!");
+    } else if (type === "shield") {
+      this.shieldBubble?.destroy();
+      this.shieldBubble = this.add.image(this.player.x, this.player.y, "shield-bubble");
+      this.shieldBubble.setDepth(DEPTH_PLAYER + 2);
+      this.shieldBubble.setDisplaySize(76, 76);
+      this.tweens.add({
+        targets: this.shieldBubble,
+        scaleX: 1.12,
+        scaleY: 1.12,
+        alpha: 0.85,
+        duration: 450,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
+      this.showBreakingNews("🌯 SUFLLAQJA E FUSHATËS: MBUROJË ME 2 JETË!");
+    } else if (type === "magnet") {
+      this.showBreakingNews("🧲 KONCESIONI MAGNETIK: TË GJITHA DOSJET PO THITHEN!");
+    }
+
+    this.updateStats({
+      lives: 2, // Always restores full 2 lives upon collecting Sufllaqe
+      activePowerUp: {
+        type,
+        remainingMs: durationMs,
+        totalMs: durationMs,
+      },
+    });
+  }
+
+  private deactivatePowerUp() {
+    this.activePowerUpType = undefined;
+    this.powerUpExpiresAt = 0;
+    this.powerUpDurationMs = 0;
+    this.shieldBubble?.destroy();
+    this.shieldBubble = undefined;
+
+    this.refreshPlayerTint();
+    this.updateStats({ activePowerUp: undefined });
+  }
+
+  private updateFlock(time: number, delta: number) {
+    const targetCount =
+      this.stats.exposure >= 30 ? 6 : this.stats.exposure >= 20 ? 4 : this.stats.exposure >= 10 ? 2 : 0;
+
+    while (this.flockSprites.length < targetCount) {
+      const idx = this.flockSprites.length;
+      const xOffset = -60 - idx * 32;
+      const yOffset = -30 + (idx % 2 === 0 ? -1 : 1) * (12 + idx * 4);
+      const sprite = this.add.image(this.player.x + xOffset, this.playerGroundY() + yOffset, "flamingo-a");
+      sprite.setDisplaySize(PLAYER_DISPLAY_WIDTH * 0.72, PLAYER_DISPLAY_HEIGHT * 0.72);
+      sprite.setDepth(DEPTH_BACKGROUND_FRONT + 2);
+      sprite.setAlpha(0.68);
+      this.flockSprites.push(sprite);
+    }
+
+    // Move companion flamingos smoothly
+    this.flockSprites.forEach((sprite, idx) => {
+      const targetX = this.player.x - 60 - idx * 30;
+      const baseGroundY = this.playerGroundY() - 28 + (idx % 2 === 0 ? -10 : 10);
+      const bobbing = Math.sin((time + idx * 400) * 0.006) * 6;
+      sprite.x = Phaser.Math.Linear(sprite.x, targetX, 0.08);
+      sprite.y = Phaser.Math.Linear(sprite.y, baseGroundY + bobbing, 0.08);
+      sprite.setTexture(this.runFrame === 0 ? "flamingo-a" : "flamingo-b");
+    });
+  }
+
+  private toggleGoldenSkin() {
+    this.goldenSkinEnabled = !this.goldenSkinEnabled;
+    this.refreshPlayerTint();
+  }
+
+  private refreshPlayerTint() {
+    if (this.activePowerUpType === "makiato") {
+      this.player.setTint(0xff4f8b);
+    } else if (this.goldenSkinEnabled) {
+      this.player.setTint(0xffd23f);
+    } else if (this.timePhase === "night") {
+      this.player.setTint(0xff99bb);
+    } else {
+      this.player.clearTint();
+    }
+  }
+
   private collectTarget(collectible: MovingSprite) {
     if (collectible.getData("collected")) return;
 
@@ -1296,6 +1657,67 @@ class RunnerScene extends Phaser.Scene {
   private takeHit(obstacle?: MovingSprite) {
     if (this.time.now < this.invulnerableUntil || this.stats.status !== "playing") return;
 
+    // 1. TURBO MAKIATO IMMUNITY: Smashes straight through obstacles!
+    if (this.activePowerUpType === "makiato") {
+      soundManager.playShredStamp();
+      triggerHaptic(40);
+      this.cameras.main.shake(80, 0.008);
+      if (obstacle && obstacle.active) {
+        this.emitPaperShreds(obstacle.x, obstacle.y, 14);
+        this.emitSparkles(obstacle.x, obstacle.y, 10);
+        const binding = this.labels.get(obstacle);
+        if (binding) {
+          binding.label.destroy();
+          this.labels.delete(obstacle);
+        }
+        obstacle.destroy();
+      }
+      this.slamRubberStamp(this.player.x, this.player.y - 28, "TURBO SMASH!");
+      this.updateStats({
+        score: this.stats.score + 100,
+        message: "TURBO DASH! Pengesa u shpartallua!",
+      });
+      return;
+    }
+
+    // 2. SUFLLAQE SHIELD ABSORPTION: Absorbs the hit completely and protects lives!
+    if (this.activePowerUpType === "shield") {
+      soundManager.playCrash();
+      triggerHaptic([40, 60]);
+      this.cameras.main.shake(100, 0.01);
+      if (obstacle && obstacle.active) {
+        this.emitPaperShreds(obstacle.x, obstacle.y, 12);
+        const binding = this.labels.get(obstacle);
+        if (binding) {
+          binding.label.destroy();
+          this.labels.delete(obstacle);
+        }
+        obstacle.destroy();
+      }
+      this.emitSparkles(this.player.x, this.player.y, 18);
+      this.floatText(this.player.x, this.player.y - 30, "🛡️ MBUROJA ABSORBOI GODITJEN!", "#06d6a0");
+      this.invulnerableUntil = this.time.now + 1500;
+      this.deactivatePowerUp();
+
+      // Flash player sprite during invulnerability
+      this.tweens.add({
+        targets: this.player,
+        alpha: 0.35,
+        duration: 90,
+        yoyo: true,
+        repeat: 7,
+        onComplete: () => {
+          this.player.setAlpha(1);
+        },
+      });
+
+      this.showBreakingNews("🛡️ SUFLLAQJA ABSORBOI GODITJEN! JE I SIGURT!");
+      this.updateStats({
+        message: "Mburoja e Sufllaqes absorboi goditjen!",
+      });
+      return;
+    }
+
     const obstacleLabel = obstacle?.getData("label") as string | undefined;
 
     // FORGIVENESS ON FIRST HIT (lives > 1)
@@ -1392,15 +1814,106 @@ class RunnerScene extends Phaser.Scene {
     return this.level.speed * this.currentSpeedMultiplier();
   }
 
-  private winRound() {
-    if (this.stats.status === "won") return;
+  private spawnFinishGate() {
+    if (this.stats.status !== "playing") return;
 
+    this.showBreakingNews("🏁 PO AFROHET SHESHI! GRIS SHIRITIN PËR TË ÇLIRUAR VENDIN!");
+
+    const speed = this.currentSpeed();
+    const x = this.scale.width + 140;
+    const gateHeight = 160;
+    const gateWidth = 110;
+
+    // 1. Grand Ministry Arch Background
+    const gate = this.physics.add.image(
+      x,
+      this.groundTop - gateHeight / 2 + 4,
+      "finish-gate",
+    ) as MovingSprite;
+    gate.setDisplaySize(gateWidth, gateHeight);
+    gate.body.allowGravity = false;
+    gate.setVelocityX(-speed);
+    gate.setDepth(DEPTH_OBSTACLE - 2);
+
+    // 2. Ceremonial Ribbon across the running line
+    const ribbonY = this.groundTop - 34;
+    const ribbon = this.physics.add.image(x, ribbonY, "finish-ribbon") as MovingSprite;
+    ribbon.setDisplaySize(96, 32);
+    ribbon.body.allowGravity = false;
+    ribbon.setVelocityX(-speed);
+    ribbon.setDepth(DEPTH_LABEL + 4);
+
+    // Overlap with player to trigger Victory!
+    const overlapDetector = this.physics.add.overlap(this.player, ribbon, () => {
+      overlapDetector.destroy();
+      ribbon.destroy();
+
+      // Tear ribbon in half + emit golden confetti & fireworks
+      soundManager.playWin();
+      triggerHaptic([40, 30, 40, 30, 80, 50, 90]);
+      this.emitGoldenConfetti(this.player.x, this.player.y, 40);
+      this.emitSparkles(this.scale.width / 2, this.scale.height / 2, 45);
+      this.slamRubberStamp(this.player.x, this.player.y - 30, "SHESHI U ÇLIRUA!");
+
+      const victoryBonus = 2000;
+      const finalScore = this.stats.score + victoryBonus;
+
+      this.time.delayedCall(450, () => {
+        this.winRound(finalScore, victoryBonus);
+      });
+    });
+  }
+
+  private emitGoldenConfetti(x: number, y: number, count = 30) {
+    const confettiColors = ["gold-confetti", "shred-red", "shred-white"];
+    for (let i = 0; i < count; i++) {
+      const key = Phaser.Utils.Array.GetRandom(confettiColors);
+      const p = this.add.image(x, y, key);
+      p.setDepth(DEPTH_PARTICLES + 10);
+
+      const angle = Phaser.Math.FloatBetween(-Math.PI * 0.95, -Math.PI * 0.05);
+      const speed = Phaser.Math.Between(160, 380);
+      const targetX = x + Math.cos(angle) * speed + Phaser.Math.Between(-60, 60);
+      const targetY = y + Math.sin(angle) * speed + Phaser.Math.Between(40, 140);
+
+      this.tweens.add({
+        targets: p,
+        x: targetX,
+        y: targetY,
+        angle: p.angle + Phaser.Math.Between(-720, 720),
+        alpha: 0,
+        scale: 0.2,
+        duration: Phaser.Math.Between(700, 1200),
+        ease: "Quad.easeOut",
+        onComplete: () => p.destroy(),
+      });
+    }
+  }
+
+  private continueEndlessMode() {
+    this.isEndless = true;
+    this.finishSpawned = false;
+    this.updateStats({
+      status: "playing",
+      isEndless: true,
+      message: "Marshim pa Fund! Regjimi ra, shko për rekordin!",
+    });
+    this.scheduleObstacleDirector(1000);
+  }
+
+  private winRound(finalScore?: number, victoryBonus = 2000) {
+    this.endBossChase(true);
     soundManager.playWin();
     this.emitSparkles(this.scale.width / 2, this.scale.height / 2, 25);
     this.stopMotion();
-    this.addBanner("Faza u kalua!");
-    this.updateStats({ status: "won", message: "Kliko per te vazhduar" });
-    this.callbacks.onLevelComplete(this.level.id, this.stats.score);
+    this.addBanner("Sheshi u Çlirua!");
+    const scoreToSet = finalScore ?? (this.stats.score + victoryBonus);
+    this.updateStats({
+      score: scoreToSet,
+      status: "won",
+      message: `Fitore Madhështore! (+${victoryBonus} Pikë)`,
+    });
+    this.callbacks.onLevelComplete(this.level.id, scoreToSet);
   }
 
   private loseRound() {
@@ -1416,7 +1929,7 @@ class RunnerScene extends Phaser.Scene {
 
     this.addBanner("Fund loje");
     trackEvent("game_over", { score: this.stats.score, exposure: this.stats.exposure });
-    this.updateStats({ status: "lost", message: "Kliko per ta rinisur" });
+    this.updateStats({ status: "lost", message: "Kliko për ta rinisur" });
   }
 
   private resetRound(status: GameStats["status"] = "ready") {
@@ -1443,6 +1956,13 @@ class RunnerScene extends Phaser.Scene {
     this.cagedEdi = false;
     this.cagedSali = false;
     this.bothAntagonistsBonusAwarded = false;
+    this.finishSpawned = false;
+    this.isEndless = false;
+    this.powerups?.clear(true, true);
+    this.flockSprites?.forEach((s) => s.destroy());
+    this.flockSprites = [];
+    this.deactivatePowerUp();
+    this.nextPowerupAt = 10000;
     this.endBossChase(false);
 
     this.sceneryGroup?.getChildren().forEach((child) => {
@@ -1481,8 +2001,8 @@ class RunnerScene extends Phaser.Scene {
       this.physics.world.pause();
       if (this.spawnTimer) this.spawnTimer.paused = true;
       if (this.scoreTimer) this.scoreTimer.paused = true;
-      this.updateStats({ status: "paused", message: "Pauze" });
-      this.addBanner("Pauze");
+      this.updateStats({ status: "paused", message: "Pauzë" });
+      this.addBanner("Pauzë");
       return;
     }
 
@@ -1501,11 +2021,13 @@ class RunnerScene extends Phaser.Scene {
     this.player.setVelocity(0, 0);
     this.obstacles.setVelocityX(0);
     this.collectibles.setVelocityX(0);
+    this.powerups.setVelocityX(0);
   }
 
   private cleanupObjects() {
     this.cleanupGroup(this.obstacles, false);
     this.cleanupGroup(this.collectibles, true);
+    this.cleanupGroup(this.powerups, false);
 
     this.labels.forEach((binding, sprite) => {
       if (!sprite.active) {
@@ -1997,7 +2519,16 @@ class RunnerScene extends Phaser.Scene {
   }
 
   private updateStats(nextStats: Partial<GameStats>) {
-    this.stats = { ...this.stats, ...nextStats };
+    const combined = { ...this.stats, ...nextStats };
+    const progress = Phaser.Math.Clamp(
+      combined.exposure / this.level.targetExposure,
+      0,
+      1,
+    );
+    this.stats = {
+      ...combined,
+      progress,
+    };
     this.callbacks.onStatsChange(this.stats);
   }
 }

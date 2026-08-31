@@ -4,9 +4,11 @@ import { soundManager } from "./game/audio";
 import { createGame } from "./game/createGame";
 import { GAME_COMMAND_EVENT, type GameCommand, type GameStats } from "./game/events";
 import { getLevel, levels } from "./game/levels";
+import { generateCertificateCode, getProtestRank } from "./game/ranks";
 import "./styles.css";
 
 const BEST_SCORE_KEY = "flamingoja-e-fundit-best-score";
+const GOLDEN_SKIN_UNLOCKED_KEY = "flamingoja-golden-skin-unlocked";
 const DEFAULT_LEVEL_ID = levels[0].id;
 
 export default function App() {
@@ -15,15 +17,26 @@ export default function App() {
   const selectedLevel = getLevel(DEFAULT_LEVEL_ID);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(() => soundManager.getMuted());
+  const [goldenSkin, setGoldenSkin] = useState(false);
+  const [isGoldenSkinUnlocked, setIsGoldenSkinUnlocked] = useState(() => {
+    try {
+      return window.localStorage.getItem(GOLDEN_SKIN_UNLOCKED_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
   const [stats, setStats] = useState<GameStats>({
     levelId: selectedLevel.id,
     levelName: selectedLevel.name,
     score: 0,
     exposure: 0,
+    targetExposure: selectedLevel.targetExposure,
+    progress: 0,
     lives: 2,
     combo: 1,
     status: "ready",
     message: selectedLevel.intro,
+    isEndless: false,
   });
   const [bestScore, setBestScore] = useState(() => {
     try {
@@ -38,14 +51,18 @@ export default function App() {
   });
 
   const [shareToast, setShareToast] = useState<string | null>(null);
+  const rank = getProtestRank(stats.score);
+  const certCode = generateCertificateCode(stats.score);
 
   const handleShare = async (event: React.MouseEvent) => {
     event.stopPropagation();
     trackEvent("share_score", { score: stats.score, exposure: stats.exposure });
     const isAntagonistWin = stats.score >= 1000;
-    const shareText = isAntagonistWin
-      ? `🦩🏛️ Futa Ramën & Berishën në burg te "Flamingoja e Fundit"! Zbulova ${stats.exposure} skandale me ${stats.score} pikë! RNBNB! A më mund dot në Shesh? #FlockTheSystem`
-      : `🦩 Arrita ${stats.score} pikë dhe zbulova ${stats.exposure} të vërteta te "Flamingoja e Fundit"! RNBNB! #FlockTheSystem`;
+    const shareText = stats.status === "won"
+      ? `🦩🏆 ÇLirova Sheshin te "Flamingoja e Fundit"! Certifikata ${certCode} | Grada ${rank.rank} "${rank.title}" me ${stats.score} pikë dhe ${stats.exposure} skandale! A më mund dot në Shesh? #FlockTheSystem`
+      : isAntagonistWin
+        ? `🦩🏛️ Futa Ramën & Berishën në burg! Grada ${rank.rank} "${rank.title}" me ${stats.score} pikë dhe ${stats.exposure} skandale te "Flamingoja e Fundit"! RNBNB! #FlockTheSystem`
+        : `🦩 Arrita Gradën ${rank.rank} "${rank.title}" me ${stats.score} pikë te "Flamingoja e Fundit"! RNBNB! #FlockTheSystem`;
 
     if (navigator.share) {
       try {
@@ -97,6 +114,14 @@ export default function App() {
     const game = createGame(gameHost.current, selectedLevel.id, {
       onStatsChange(nextStats) {
         setStats(nextStats);
+        if (nextStats.status === "won") {
+          setIsGoldenSkinUnlocked(true);
+          try {
+            window.localStorage.setItem(GOLDEN_SKIN_UNLOCKED_KEY, "true");
+          } catch {
+            // Ignore restricted storage errors
+          }
+        }
         if (nextStats.score > bestScoreRef.current) {
           bestScoreRef.current = nextStats.score;
           setBestScore(nextStats.score);
@@ -154,7 +179,9 @@ export default function App() {
             <span className="stat-icon">🎯</span>
             <div className="stat-content">
               <span className="stat-label">ZBULIME</span>
-              <span className="stat-val">{stats.exposure}</span>
+              <span className="stat-val">
+                {stats.isEndless ? `${stats.exposure}` : `${stats.exposure}/${stats.targetExposure}`}
+              </span>
             </div>
           </div>
 
@@ -199,6 +226,56 @@ export default function App() {
         </div>
       </header>
 
+      {/* Dynamic Campaign Progress Loading Bar */}
+      <div className="campaign-progress-container" aria-label="Progresi drejt Çlirimit">
+        <div className="progress-track">
+          <div
+            className="progress-fill"
+            style={{ width: `${Math.min(100, Math.round((stats.progress || 0) * 100))}%` }}
+          />
+          <div className="progress-nodes">
+            <span className={`node ${(stats.progress || 0) >= 0.25 ? "active" : ""}`} title="25% - Makiato Zone">☕</span>
+            <span className={`node ${(stats.progress || 0) >= 0.50 ? "active" : ""}`} title="50% - SPAK Sirens">🚨</span>
+            <span className={`node ${(stats.progress || 0) >= 0.75 ? "active" : ""}`} title="75% - Piktori Chase">🎨</span>
+            <span className={`node ${(stats.progress || 0) >= 1.0 ? "active" : ""}`} title="100% - Çlirimi i Sheshit">🏁</span>
+          </div>
+        </div>
+        <div className="progress-meta">
+          <span className="progress-title">
+            {stats.isEndless ? "MARSHIM PA FUND" : "ÇLIRIMI I SHESHIT"}
+          </span>
+          <span className="progress-percent">
+            {stats.isEndless ? "♾️" : `${Math.min(100, Math.round((stats.progress || 0) * 100))}%`}
+          </span>
+        </div>
+      </div>
+
+      {/* Active Power-Up Banner */}
+      {stats.activePowerUp ? (
+        <div className={`powerup-pill powerup-${stats.activePowerUp.type}`}>
+          <span className="powerup-icon">
+            {stats.activePowerUp.type === "makiato" ? "☕" : stats.activePowerUp.type === "shield" ? "🛡️" : "🧲"}
+          </span>
+          <div className="powerup-info">
+            <span className="powerup-name">
+              {stats.activePowerUp.type === "makiato"
+                ? "MAKIATO TURBO DASH"
+                : stats.activePowerUp.type === "shield"
+                  ? "SUFLLAQE MBUROJË"
+                  : "MAGNET SLOGANESH"}
+            </span>
+            <div className="powerup-bar-track">
+              <div
+                className="powerup-bar-fill"
+                style={{
+                  width: `${Math.max(0, (stats.activePowerUp.remainingMs / stats.activePowerUp.totalMs) * 100)}%`,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {/* Start / Game Over / Victory Modal */}
       {showStartScreen ? (
         <section className="start-screen" aria-label="Nisja" onClick={startGame}>
@@ -221,6 +298,88 @@ export default function App() {
                   : "Flamingo e Fundit"}
             </h2>
             <p className="status-subtext">{stats.message}</p>
+
+            {stats.status === "ready" && isGoldenSkinUnlocked ? (
+              <div className="ready-skin-box" onClick={(e) => e.stopPropagation()}>
+                <span className="ready-skin-label">✨ Lëkura e Artë e Zhbllokuar:</span>
+                <button
+                  type="button"
+                  className={`skin-toggle-btn ${goldenSkin ? "active" : ""}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setGoldenSkin(!goldenSkin);
+                    sendCommand("toggle_golden_skin");
+                  }}
+                >
+                  {goldenSkin ? "✨ Aktive" : "Aktivizo"}
+                </button>
+              </div>
+            ) : null}
+
+            {/* Satirical Protest Rank Badge on Finished Runs */}
+            {stats.status === "lost" || stats.status === "won" ? (
+              <div className="rank-badge-card" style={{ borderColor: rank.color }}>
+                <div className="rank-letter-badge" style={{ backgroundColor: rank.color }}>
+                  <span className="rank-symbol">{rank.badge}</span>
+                  <span className="rank-name">{rank.rank}</span>
+                </div>
+                <div className="rank-text-block">
+                  <span className="rank-title" style={{ color: rank.color }}>{rank.title}</span>
+                  <p className="rank-desc">{rank.description}</p>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Official Golden Revolutionary Certificate on Victory */}
+            {stats.status === "won" ? (
+              <div className="victory-certificate">
+                <div className="cert-header">
+                  <span className="cert-seal">🇦🇱 ⚖️</span>
+                  <span className="cert-org">REPUBLIKA E REVOLUCIONIT TË FLAMINGOVE</span>
+                </div>
+                <h3 className="cert-title">DËSHMI ÇLIRIMI & DEKORATË NDERI</h3>
+                <p className="cert-text">
+                  Kjo dëshmi vërteton zyrtarisht se mbajtësi arriti të rrëzojë fasadën e regjimit dhe zbardhi të gjitha dosjet!
+                </p>
+                <div className="cert-meta-grid">
+                  <div className="cert-meta-item">
+                    <span className="cert-meta-label">KODI ZYRTAR</span>
+                    <span className="cert-meta-val">{certCode}</span>
+                  </div>
+                  <div className="cert-meta-item">
+                    <span className="cert-meta-label">GRADA</span>
+                    <span className="cert-meta-val" style={{ color: rank.color }}>{rank.rank} — {rank.title}</span>
+                  </div>
+                  <div className="cert-meta-item">
+                    <span className="cert-meta-label">PIKË TOTAL</span>
+                    <span className="cert-meta-val">{stats.score}</span>
+                  </div>
+                  <div className="cert-meta-item">
+                    <span className="cert-meta-label">SPAK VERIFIED</span>
+                    <span className="cert-meta-val" style={{ color: "#06d6a0" }}>✅ DOSJA U MBYLL</span>
+                  </div>
+                </div>
+
+                <div className="cert-reward-box">
+                  <span className="reward-icon">✨ 🦩</span>
+                  <div className="reward-info">
+                    <span className="reward-label">SHPËRBLIMI I FITORES:</span>
+                    <strong className="reward-name">Lëkura e Flamingos së Artë</strong>
+                  </div>
+                  <button
+                    type="button"
+                    className={`skin-toggle-btn ${goldenSkin ? "active" : ""}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setGoldenSkin(!goldenSkin);
+                      sendCommand("toggle_golden_skin");
+                    }}
+                  >
+                    {goldenSkin ? "✨ Çaktivizo" : "✨ Aktivizo"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
 
             {stats.status === "lost" ? (
               <div className="antagonist-cameo">
@@ -247,23 +406,53 @@ export default function App() {
             ) : null}
 
             <div className="start-actions">
-              <button type="button" className="primary-start" onClick={startGame}>
-                {stats.status === "lost"
-                  ? "Rinis Marshimin"
-                  : stats.status === "won"
-                    ? "Vazhdo Marshimin"
-                    : "Nis Marshimin"}
-              </button>
+              {stats.status === "won" ? (
+                <>
+                  <button
+                    type="button"
+                    className="primary-start endless-button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      sendCommand("continue_endless");
+                    }}
+                  >
+                    ♾️ Vazhdo Marshimin pa Fund
+                  </button>
+                  <button
+                    type="button"
+                    className="share-button"
+                    onClick={handleShare}
+                  >
+                    📢 Shpërndaj Fitoren (WhatsApp / Story)
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-restart-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startGame();
+                    }}
+                  >
+                    🔄 Fillo nga e Para
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="primary-start" onClick={startGame}>
+                    {stats.status === "lost" ? "Rinis Marshimin" : "Nis Marshimin"}
+                  </button>
 
-              {stats.status === "lost" || stats.status === "won" ? (
-                <button
-                  type="button"
-                  className="share-button"
-                  onClick={handleShare}
-                >
-                  📢 Shpërndaj në Story / WhatsApp
-                </button>
-              ) : null}
+                  {stats.status === "lost" ? (
+                    <button
+                      type="button"
+                      className="share-button"
+                      onClick={handleShare}
+                    >
+                      📢 Shpërndaj në Story / WhatsApp
+                    </button>
+                  ) : null}
+                </>
+              )}
 
               {shareToast ? (
                 <div className="share-toast" role="status">
@@ -280,7 +469,7 @@ export default function App() {
                     setIsRulesModalOpen(true);
                   }}
                 >
-                  📜 Rregullat e Protestës
+                  📜 Rregullat e Sheshit
                 </button>
               </div>
             </div>

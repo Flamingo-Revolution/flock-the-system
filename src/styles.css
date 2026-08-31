@@ -409,13 +409,97 @@ button:disabled {
   }
 }
 
-.next-stage-btn {
-  background: #06d6a0;
-  color: #10131d;
+/* --- PROTEST RANK BADGE --- */
+.rank-badge-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(16, 19, 29, 0.95);
+  border: 2px solid #ffd23f;
+  border-radius: 12px;
+  padding: 10px 14px;
+  text-align: left;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  animation: rankPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.next-stage-btn:hover {
-  background: #00f5b4;
+@keyframes rankPop {
+  0% { transform: scale(0.85); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.rank-letter-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  border-radius: 10px;
+  color: #10131d;
+  font-weight: 900;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.rank-symbol {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.rank-name {
+  font-size: 1.1rem;
+  line-height: 1;
+  font-family: "Outfit", Arial Black, sans-serif;
+  letter-spacing: -0.5px;
+}
+
+.rank-text-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.rank-title {
+  font-size: 0.95rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  line-height: 1.15;
+}
+
+.rank-desc {
+  margin: 0;
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.25;
+}
+
+.endless-button {
+  background: linear-gradient(135deg, #ff007f 0%, #7928ca 100%) !important;
+  color: #ffffff !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  animation: endlessPulse 1.8s infinite alternate;
+}
+
+@keyframes endlessPulse {
+  0% { box-shadow: 0 4px 0 #10131d, 0 0 12px rgba(255, 0, 127, 0.4); }
+  100% { box-shadow: 0 4px 0 #10131d, 0 0 22px rgba(121, 40, 202, 0.8); }
+}
+
+.secondary-restart-btn {
+  width: 100%;
+  min-height: 44px;
+  background: #222a3a;
+  color: #ffffff;
+  font-size: 0.9rem;
+}
+
+.secondary-restart-btn:hover {
+  background: #334155;
+  color: #ffd23f;
 }
 
 .secondary-row {
@@ -597,4 +681,318 @@ button:disabled {
     left: auto;
     width: 380px;
   }
+}
+
+/* ==========================================================================
+   CAMPAIGN PROGRESS BAR (ÇLIRIMI I SHESHIT)
+   ========================================================================== */
+.campaign-progress-container {
+  position: absolute;
+  top: max(56px, calc(env(safe-area-inset-top) + 56px));
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  pointer-events: none;
+}
+
+.progress-track {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  overflow: visible;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff4f8b, #ffd23f, #06d6a0);
+  box-shadow: 0 0 12px rgba(255, 79, 139, 0.7);
+  transition: width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.progress-nodes {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.progress-nodes .node {
+  font-size: 0.7rem;
+  opacity: 0.4;
+  transform: scale(0.85);
+  transition: all 0.25s ease;
+  filter: grayscale(1);
+}
+
+.progress-nodes .node.active {
+  opacity: 1;
+  transform: scale(1.15);
+  filter: grayscale(0) drop-shadow(0 0 6px #ffd23f);
+}
+
+.progress-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.progress-title {
+  color: #ffd23f;
+}
+
+.progress-percent {
+  color: #06d6a0;
+}
+
+/* ==========================================================================
+   ACTIVE POWER-UP PILL
+   ========================================================================== */
+.powerup-pill {
+  position: absolute;
+  top: max(88px, calc(env(safe-area-inset-top) + 88px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1.5px solid #ff4f8b;
+  border-radius: 999px;
+  box-shadow: 0 4px 18px rgba(255, 79, 139, 0.45);
+  animation: powerupPulse 1.2s infinite alternate ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes powerupPulse {
+  from {
+    transform: translateX(-50%) scale(0.96);
+  }
+  to {
+    transform: translateX(-50%) scale(1.03);
+  }
+}
+
+.powerup-pill.powerup-makiato {
+  border-color: #ff4f8b;
+  box-shadow: 0 4px 18px rgba(255, 79, 139, 0.5);
+}
+
+.powerup-pill.powerup-shield {
+  border-color: #06d6a0;
+  box-shadow: 0 4px 18px rgba(6, 214, 160, 0.5);
+}
+
+.powerup-pill.powerup-magnet {
+  border-color: #38bdf8;
+  box-shadow: 0 4px 18px rgba(56, 189, 248, 0.5);
+}
+
+.powerup-icon {
+  font-size: 1.05rem;
+}
+
+.powerup-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.powerup-name {
+  font-size: 0.62rem;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 0.05em;
+}
+
+.powerup-bar-track {
+  width: 76px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.powerup-bar-fill {
+  height: 100%;
+  background: #ffd23f;
+  border-radius: 999px;
+}
+
+/* ==========================================================================
+   OFFICIAL GOLDEN REVOLUTIONARY CERTIFICATE
+   ========================================================================== */
+.victory-certificate {
+  width: 100%;
+  margin: 10px 0;
+  padding: 14px;
+  background: radial-gradient(circle at center, #1e293b, #0f172a);
+  border: 2px solid #ffd23f;
+  border-radius: 12px;
+  box-shadow: 0 0 24px rgba(255, 210, 63, 0.35), inset 0 0 12px rgba(255, 210, 63, 0.15);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.cert-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.cert-seal {
+  font-size: 1.1rem;
+}
+
+.cert-org {
+  font-size: 0.55rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #ffd23f;
+  text-transform: uppercase;
+}
+
+.cert-title {
+  margin: 2px 0 6px 0;
+  font-size: 0.92rem;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 10px rgba(255, 210, 63, 0.5);
+}
+
+.cert-text {
+  font-size: 0.68rem;
+  color: #cbd5e1;
+  line-height: 1.35;
+  margin: 0 0 10px 0;
+}
+
+.cert-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+.cert-meta-item {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 210, 63, 0.25);
+  border-radius: 6px;
+}
+
+.cert-meta-label {
+  font-size: 0.48rem;
+  font-weight: 900;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+}
+
+.cert-meta-val {
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: #ffffff;
+  margin-top: 1px;
+}
+
+.cert-reward-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: linear-gradient(90deg, rgba(255, 210, 63, 0.15), rgba(255, 79, 139, 0.15));
+  border: 1.5px dashed #ffd23f;
+  border-radius: 8px;
+}
+
+.reward-icon {
+  font-size: 1.25rem;
+}
+
+.reward-info {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.reward-label {
+  font-size: 0.5rem;
+  font-weight: 800;
+  color: #ffd23f;
+}
+
+.reward-name {
+  font-size: 0.76rem;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.skin-toggle-btn {
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 0.68rem;
+  font-weight: 900;
+  color: #0f172a;
+  background: #ffd23f;
+  border: none;
+  border-radius: 6px;
+  box-shadow: 0 2px 0 #b45309;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.skin-toggle-btn:hover {
+  background: #fde047;
+  transform: translateY(-1px);
+}
+
+.skin-toggle-btn.active {
+  background: #06d6a0;
+  color: #ffffff;
+  box-shadow: 0 2px 0 #047857;
+}
+
+.ready-skin-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 8px 0;
+  padding: 6px 12px;
+  background: rgba(255, 210, 63, 0.12);
+  border: 1px dashed #ffd23f;
+  border-radius: 8px;
+}
+
+.ready-skin-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #ffd23f;
 }
