@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { trackEvent } from "./analytics";
 import { soundManager } from "./audio";
 import {
   GAME_COMMAND_EVENT,
@@ -1292,7 +1293,7 @@ class RunnerScene extends Phaser.Scene {
     this.emitSparkles(this.scale.width / 2, this.scale.height / 2, 25);
     this.stopMotion();
     this.addBanner("Faza u kalua!");
-    this.updateStats({ status: "won", message: "Prek per te vazhduar" });
+    this.updateStats({ status: "won", message: "Kliko per te vazhduar" });
     this.callbacks.onLevelComplete(this.level.id, this.stats.score);
   }
 
@@ -1308,7 +1309,8 @@ class RunnerScene extends Phaser.Scene {
     });
 
     this.addBanner("Fund loje");
-    this.updateStats({ status: "lost", message: "Prek per ta rinisur" });
+    trackEvent("game_over", { score: this.stats.score, exposure: this.stats.exposure });
+    this.updateStats({ status: "lost", message: "Kliko per ta rinisur" });
   }
 
   private resetRound(status: GameStats["status"] = "ready") {

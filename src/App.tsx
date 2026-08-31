@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { trackEvent } from "./game/analytics";
 import { soundManager } from "./game/audio";
 import { createGame } from "./game/createGame";
 import { GAME_COMMAND_EVENT, type GameCommand, type GameStats } from "./game/events";
@@ -34,6 +35,7 @@ export default function App() {
 
   const handleShare = async (event: React.MouseEvent) => {
     event.stopPropagation();
+    trackEvent("share_score", { score: stats.score, exposure: stats.exposure });
     const isAntagonistWin = stats.score >= 1000;
     const shareText = isAntagonistWin
       ? `🦩🏛️ Futa Ramën & Berishën në burg te "Flamingoja e Fundit"! Zbulova ${stats.exposure} skandale me ${stats.score} pikë! RNBNB! A më mund dot në Shesh? #FlockTheSystem`
@@ -73,6 +75,7 @@ export default function App() {
 
   function startGame() {
     setIsRulesModalOpen(false);
+    trackEvent("game_start", { level_id: selectedLevel.id });
     sendCommand("start");
   }
 
@@ -94,8 +97,8 @@ export default function App() {
           window.localStorage.setItem(BEST_SCORE_KEY, String(nextStats.score));
         }
       },
-      onLevelComplete() {
-        // level complete callback
+      onLevelComplete(levelId, finalScore) {
+        trackEvent("level_complete", { level_id: levelId, score: finalScore });
       },
     });
 
