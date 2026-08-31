@@ -135,12 +135,26 @@ export default function App() {
       onLevelComplete(levelId, finalScore) {
         trackEvent("level_complete", { level_id: levelId, score: finalScore });
       },
+      onMuteToggle(muted) {
+        setIsMuted(muted);
+      },
     });
 
     return () => {
       game.destroy(true);
     };
   }, [selectedLevel.id]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "m" || e.key === "M") {
+        soundManager.toggleMute();
+        setIsMuted(soundManager.getMuted());
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const showStartScreen =
     stats.status === "ready" || stats.status === "won" || stats.status === "lost";
@@ -234,10 +248,10 @@ export default function App() {
             style={{ width: `${Math.min(100, Math.round((stats.progress || 0) * 100))}%` }}
           />
           <div className="progress-nodes">
-            <span className={`node ${(stats.progress || 0) >= 0.25 ? "active" : ""}`} title="25% - Makiato Zone">☕</span>
-            <span className={`node ${(stats.progress || 0) >= 0.50 ? "active" : ""}`} title="50% - SPAK Sirens">🚨</span>
-            <span className={`node ${(stats.progress || 0) >= 0.75 ? "active" : ""}`} title="75% - Piktori Chase">🎨</span>
-            <span className={`node ${(stats.progress || 0) >= 1.0 ? "active" : ""}`} title="100% - Çlirimi i Sheshit">🏁</span>
+            <span className={`node ${(stats.progress || 0) >= 0.25 ? "active" : ""}`} title="25% - Makiato Zone (15 Zbulime)">☕</span>
+            <span className={`node ${(stats.progress || 0) >= 0.50 ? "active" : ""}`} title="50% - Dronët & Alarmi (30 Zbulime)">🚨</span>
+            <span className={`node ${(stats.progress || 0) >= 0.75 ? "active" : ""}`} title="75% - Furgoni & Gazi (45 Zbulime)">💨</span>
+            <span className={`node ${(stats.progress || 0) >= 1.0 ? "active" : ""}`} title="100% - Çlirimi i Sheshit (60 Zbulime)">🏁</span>
           </div>
         </div>
         <div className="progress-meta">
@@ -438,7 +452,14 @@ export default function App() {
                 </>
               ) : (
                 <>
-                  <button type="button" className="primary-start" onClick={startGame}>
+                  <button
+                    type="button"
+                    className="primary-start"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startGame();
+                    }}
+                  >
                     {stats.status === "lost" ? "Rinis Marshimin" : "Nis Marshimin"}
                   </button>
 

@@ -35,11 +35,12 @@ const DEPTH_BACKGROUND_BACK = -40;
 const DEPTH_BACKGROUND_FRONT = -30;
 const DEPTH_SHADOW = 4;
 const DEPTH_GROUND = 5;
+const DEPTH_REWARD_FX = 15;
+const DEPTH_COLLECTIBLE = 20;
 const DEPTH_PARTICLES = 25;
-const DEPTH_OBSTACLE = 30;
-const DEPTH_COLLECTIBLE = 34;
-const DEPTH_PLAYER = 42;
-const DEPTH_LABEL = 48;
+const DEPTH_PLAYER = 35;
+const DEPTH_OBSTACLE = 45;
+const DEPTH_LABEL = 50;
 const DEPTH_BANNER = 60;
 
 type MovingSprite = Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
@@ -88,6 +89,7 @@ class RunnerScene extends Phaser.Scene {
   private wKey!: Phaser.Input.Keyboard.Key;
   private pauseKey!: Phaser.Input.Keyboard.Key;
   private restartKey!: Phaser.Input.Keyboard.Key;
+  private muteKey!: Phaser.Input.Keyboard.Key;
   private obstacles!: Phaser.Physics.Arcade.Group;
   private collectibles!: Phaser.Physics.Arcade.Group;
   private cityBack!: Phaser.GameObjects.TileSprite;
@@ -141,7 +143,13 @@ class RunnerScene extends Phaser.Scene {
   private readonly handleCommand = (event: Event) => {
     const command = (event as CustomEvent<GameCommand>).detail;
 
-    if (command === "start") this.requestJump();
+    if (command === "start") {
+      if (this.stats.status === "ready") {
+        this.startRound();
+      } else if (this.stats.status === "lost" || this.stats.status === "won") {
+        this.resetRound("playing");
+      }
+    }
     if (command === "pause") this.togglePause();
     if (command === "restart") this.resetRound("playing");
     if (command === "continue_endless") this.continueEndlessMode();
@@ -234,6 +242,7 @@ class RunnerScene extends Phaser.Scene {
     this.wKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W);
     this.pauseKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.P);
     this.restartKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    this.muteKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.M);
 
     this.input.keyboard?.addCapture([
       Phaser.Input.Keyboard.KeyCodes.SPACE,
@@ -623,6 +632,45 @@ class RunnerScene extends Phaser.Scene {
       s.generateTexture("shield-bubble", 76, 76);
       s.destroy();
     }
+
+    if (!this.textures.exists("police-van")) {
+      const v = this.make.graphics({ x: 0, y: 0 }, false);
+      v.fillStyle(0x1e293b, 1);
+      v.fillRoundedRect(4, 12, 64, 24, 4);
+      v.fillStyle(0x38bdf8, 0.9);
+      v.fillRect(40, 15, 16, 10);
+      v.fillRect(20, 15, 16, 10);
+      v.fillStyle(0xffffff, 1);
+      v.fillRect(4, 26, 64, 4);
+      v.fillStyle(0xef4444, 1);
+      v.fillRect(28, 7, 6, 5);
+      v.fillStyle(0x3b82f6, 1);
+      v.fillRect(34, 7, 6, 5);
+      v.fillStyle(0x0f172a, 1);
+      v.fillCircle(18, 36, 6);
+      v.fillCircle(54, 36, 6);
+      v.fillStyle(0x94a3b8, 1);
+      v.fillCircle(18, 36, 3);
+      v.fillCircle(54, 36, 3);
+      v.generateTexture("police-van", 72, 44);
+      v.destroy();
+    }
+
+    if (!this.textures.exists("teargas-canister")) {
+      const t = this.make.graphics({ x: 0, y: 0 }, false);
+      t.fillStyle(0x64748b, 1);
+      t.fillRoundedRect(6, 4, 16, 26, 3);
+      t.fillStyle(0xef4444, 1);
+      t.fillRect(6, 12, 16, 4);
+      t.fillStyle(0x334155, 1);
+      t.fillRect(9, 1, 10, 4);
+      t.fillStyle(0xe2e8f0, 0.8);
+      t.fillCircle(14, 34, 4);
+      t.fillCircle(11, 38, 5);
+      t.fillCircle(17, 39, 4.5);
+      t.generateTexture("teargas-canister", 28, 46);
+      t.destroy();
+    }
   }
 
   update(time: number, delta: number) {
@@ -635,6 +683,12 @@ class RunnerScene extends Phaser.Scene {
 
     if (Phaser.Input.Keyboard.JustDown(this.pauseKey)) {
       this.togglePause();
+      return;
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.muteKey)) {
+      soundManager.toggleMute();
+      this.callbacks.onMuteToggle?.(soundManager.getMuted());
       return;
     }
 
@@ -1058,8 +1112,15 @@ class RunnerScene extends Phaser.Scene {
       if (hazardType === "air") {
         const baseY = sprite.getData("baseY") as number;
         if (baseY) {
-          const hoverOffset = Math.sin((time + sprite.x * 2) * 0.0045) * 6;
-          sprite.y = baseY + hoverOffset;
+          const isSwooper = Boolean(sprite.getData("isSwooper"));
+          if (isSwooper) {
+            const spawnTime = (sprite.getData("spawnTime") as number) || time;
+            const dive = Math.sin((time - spawnTime) * 0.005) * 28;
+            sprite.y = Phaser.Math.Clamp(baseY + dive, this.groundTop - 150, this.groundTop - 36);
+          } else {
+            const hoverOffset = Math.sin((time + sprite.x * 2) * 0.0045) * 7;
+            sprite.y = baseY + hoverOffset;
+          }
         }
       }
     });
@@ -1185,25 +1246,26 @@ class RunnerScene extends Phaser.Scene {
     }
 
     const elapsedSeconds = (this.time.now - this.roundStartAt) / 1000;
+    const exposure = this.stats.exposure;
     let nextDelay = overrideDelay;
 
     if (!nextDelay) {
-      if (elapsedSeconds < 18) {
-        // 0-18s: Warmup runway (1700ms - 2200ms)
-        nextDelay = Phaser.Math.Between(1700, 2200);
-      } else if (elapsedSeconds < 40) {
-        // 18-40s: Steady building rhythm (1400ms - 1800ms)
-        nextDelay = Phaser.Math.Between(1400, 1800);
-      } else if (elapsedSeconds < 75) {
-        // 40-75s: Mid-game pressure with fair landing recovery (1150ms - 1500ms)
-        const baseDelay = 1400 / Math.pow(this.currentSpeedMultiplier(), 0.6);
-        const jitter = Phaser.Math.Between(-120, 140);
-        nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 1050, 1500);
+      if (exposure < 12) {
+        // 0-12 Scandals: Lively, snappy warmup (950ms - 1300ms)
+        nextDelay = Phaser.Math.Between(950, 1300);
+      } else if (exposure < 28) {
+        // 12-28 Scandals: Fast building cadence (820ms - 1100ms)
+        nextDelay = Phaser.Math.Between(820, 1100);
+      } else if (exposure < 45) {
+        // 28-45 Scandals: Intense pressure & hazard blitzes (680ms - 940ms)
+        const baseDelay = 950 / Math.pow(this.currentSpeedMultiplier(), 0.65);
+        const jitter = Phaser.Math.Between(-80, 80);
+        nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 660, 950);
       } else {
-        // 75s+: High speed arcade cadence (minimum 960ms for clean landing resets)
-        const baseDelay = 1200 / Math.pow(this.currentSpeedMultiplier(), 0.6);
-        const jitter = Phaser.Math.Between(-100, 120);
-        nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 960, 1350);
+        // 45-60+ Scandals: High adrenaline reflex climax (560ms - 820ms)
+        const baseDelay = 820 / Math.pow(this.currentSpeedMultiplier(), 0.7);
+        const jitter = Phaser.Math.Between(-60, 60);
+        nextDelay = Phaser.Math.Clamp(baseDelay + jitter, 540, 820);
       }
     }
 
@@ -1220,58 +1282,177 @@ class RunnerScene extends Phaser.Scene {
   private directorSpawnNext() {
     if (this.stats.status !== "playing") return;
 
-    const elapsedSeconds = (this.time.now - this.roundStartAt) / 1000;
+    const exposure = this.stats.exposure;
 
-    if (elapsedSeconds < 18) {
-      // 0-18s: Only easy ground hurdles (papers)
-      this.spawnGroundObstacle("ground_low");
-    } else if (elapsedSeconds < 35) {
-      // 18-35s: Mostly papers and podiums, rare ministry
+    if (exposure < 10) {
+      // 0-10 Scandals: Low hurdles & occasional podium
       const roll = Math.random();
-      if (roll < 0.52) {
+      if (roll < 0.60) {
         this.spawnGroundObstacle("ground_low");
-      } else if (roll < 0.82) {
-        this.spawnGroundObstacle("ground_med");
       } else {
-        this.spawnGroundObstacle("ground_tall");
-      }
-    } else if (elapsedSeconds < 70) {
-      // 35-70s: Balanced mix with 30% air hazards + 24% double packs (cleared in 1 leap)
-      const roll = Math.random();
-      if (roll < 0.30 && this.lastSpawnCategory !== "ground_tall") {
-        this.spawnAirHazard();
-      } else if (roll < 0.54) {
-        this.spawnDoublePack();
-      } else if (roll < 0.78) {
         this.spawnGroundObstacle("ground_med");
+      }
+    } else if (exposure < 25) {
+      // 10-25 Scandals: Double packs, air hazards, and podiums
+      const roll = Math.random();
+      if (roll < 0.28) {
+        this.spawnGroundObstacle("ground_low");
+      } else if (roll < 0.52) {
+        this.spawnGroundObstacle("ground_med");
+      } else if (roll < 0.74) {
+        this.spawnDoublePack();
+      } else {
+        this.spawnAirHazard(Math.random() < 0.35);
+      }
+    } else if (exposure < 45) {
+      // 25-45 Scandals: Fast Police Vans, Falling Tear Gas, Swooping Drones, Triple Staccato
+      const roll = Math.random();
+      if (roll < 0.18) {
+        this.spawnPoliceVan();
+      } else if (roll < 0.34) {
+        this.spawnFallingTeargas();
+      } else if (roll < 0.50) {
+        this.spawnAirHazard(true); // Swooping Drone
+      } else if (roll < 0.68) {
+        this.spawnTripleRhythm();
+      } else if (roll < 0.84) {
+        this.spawnStaggeredAirGround();
       } else {
         this.spawnGroundObstacle("ground_tall");
       }
     } else {
-      // 70s+: Full speed arcade variety with fair landing gaps
+      // 45-60+ Scandals: Full Speed Revolutionary Climax (All Hazards blitzing)
       const roll = Math.random();
-      if (roll < 0.35 && this.lastSpawnCategory !== "ground_tall") {
-        this.spawnAirHazard();
-      } else if (roll < 0.65) {
-        this.spawnDoublePack();
-      } else if (roll < 0.85) {
-        this.spawnGroundObstacle("ground_med");
+      if (roll < 0.22) {
+        this.spawnPoliceVan();
+      } else if (roll < 0.40) {
+        this.spawnFallingTeargas();
+      } else if (roll < 0.56) {
+        this.spawnTripleRhythm();
+      } else if (roll < 0.72) {
+        this.spawnStaggeredAirGround();
+      } else if (roll < 0.86) {
+        this.spawnAirHazard(true);
       } else {
         this.spawnGroundObstacle("ground_tall");
       }
     }
 
-    // 65% chance to spawn a collectible / antagonist in a safe jumping arc
-    if (Math.random() < 0.65) {
-      this.spawnCollectibleSafeArc();
+    // 78% chance to spawn collectibles / high-vault secret golden dossiers
+    if (Math.random() < 0.78) {
+      const isHighVault = Math.random() < 0.32;
+      this.spawnCollectibleSafeArc(isHighVault);
     }
   }
 
-  // Double pack: 2 small paper stacks spawned synchronously side-by-side (cleared together in 1 leap)
+  // Rapid Police / Propaganda Van Hazard with ⚠️ Warning Alert
+  private spawnPoliceVan() {
+    if (this.stats.status !== "playing") return;
+
+    soundManager.playSiren();
+    triggerHaptic([50, 40, 50, 40, 80]);
+
+    // Flash Warning Icon ⚠️ on right screen edge
+    const warning = this.add
+      .text(this.scale.width - 24, this.groundTop - 28, "⚠️", {
+        fontSize: "24px",
+      })
+      .setOrigin(0.5)
+      .setDepth(DEPTH_LABEL + 6);
+
+    this.tweens.add({
+      targets: warning,
+      scale: 1.4,
+      alpha: 0.2,
+      duration: 140,
+      yoyo: true,
+      repeat: 3,
+      onComplete: () => warning.destroy(),
+    });
+
+    this.time.delayedCall(450, () => {
+      if (this.stats.status !== "playing") return;
+
+      const speed = this.currentSpeed() * 1.35;
+      const x = this.scale.width + 50;
+      const height = 44;
+      const width = 72;
+
+      const sprite = this.physics.add.image(
+        x,
+        this.groundTop - height / 2 + 2,
+        "police-van",
+      ) as MovingSprite;
+      this.obstacles.add(sprite);
+
+      sprite.setDisplaySize(width, height);
+      sprite.setActive(true).setVisible(true).setAlpha(1);
+      sprite.body.allowGravity = false;
+      sprite.body.setSize(width * 0.55, height * 0.45).setOffset(width * 0.22, height * 0.48);
+      sprite.setVelocityX(-speed);
+      sprite.setDepth(DEPTH_OBSTACLE);
+      sprite.setData("label", "MAKINA E PROPAGANDËS");
+      sprite.setData("hazardType", "police_van");
+    });
+  }
+
+  // Falling Tear Gas Canister from the sky
+  private spawnFallingTeargas() {
+    if (this.stats.status !== "playing") return;
+
+    const x = this.scale.width + Phaser.Math.Between(40, 110);
+    const sprite = this.physics.add.image(x, -20, "teargas-canister") as MovingSprite;
+    this.obstacles.add(sprite);
+
+    sprite.setDisplaySize(24, 38);
+    sprite.body.allowGravity = false;
+    sprite.body.setSize(18, 28).setOffset(3, 5);
+    sprite.setVelocityX(-this.currentSpeed() * 0.9);
+    sprite.setVelocityY(280);
+    sprite.setDepth(DEPTH_OBSTACLE);
+    sprite.setData("label", "GAZ LOTËSJELLËS");
+    sprite.setData("hazardType", "falling_teargas");
+
+    // Once it hits near ground, stop dropping and destroy timer
+    const landTimer = this.time.addEvent({
+      delay: 50,
+      loop: true,
+      callback: () => {
+        if (!sprite.active) {
+          landTimer.destroy();
+          return;
+        }
+        if (sprite.y >= this.groundTop - 18) {
+          sprite.y = this.groundTop - 18;
+          sprite.setVelocityY(0);
+          sprite.setVelocityX(-this.currentSpeed());
+          landTimer.destroy();
+        }
+      },
+    });
+    sprite.once(Phaser.GameObjects.Events.DESTROY, () => landTimer.destroy());
+  }
+
+  // Double pack: 2 small paper stacks spawned side-by-side
   private spawnDoublePack() {
     if (this.stats.status !== "playing") return;
     this.spawnGroundObstacle("ground_low", 0);
     this.spawnGroundObstacle("ground_low", 38);
+  }
+
+  // Triple rhythm: 3 small hurdles with snappy spacing
+  private spawnTripleRhythm() {
+    if (this.stats.status !== "playing") return;
+    this.spawnGroundObstacle("ground_low", 0);
+    this.spawnGroundObstacle("ground_low", 42);
+    this.spawnGroundObstacle("ground_low", 84);
+  }
+
+  // Staggered Air & Ground sequence with safe 240px horizontal spacing
+  private spawnStaggeredAirGround() {
+    if (this.stats.status !== "playing") return;
+    this.spawnGroundObstacle("ground_low", 0);
+    this.spawnAirHazard(false, 240);
   }
 
   private spawnGroundObstacle(category: "ground_low" | "ground_med" | "ground_tall", offsetX = 0) {
@@ -1313,14 +1494,16 @@ class RunnerScene extends Phaser.Scene {
     this.lastSpawnCategory = category;
   }
 
-  private spawnAirHazard() {
+  private spawnAirHazard(isSwooper = false, offsetX = 0) {
     if (this.stats.status !== "playing") return;
 
     const hazard = this.nextAirHazard();
     const speed = this.currentSpeed();
-    const x = this.scale.width + Phaser.Math.Between(50, 90);
-    // Altitude randomized: either high or mid
-    const y = this.groundTop - Phaser.Math.Between(108, 148);
+    const x = this.scale.width + Phaser.Math.Between(50, 90) + offsetX;
+    // High air hazards leave 80px+ clear headroom so players easily run underneath on foot
+    const y = isSwooper
+      ? this.groundTop - 142
+      : this.groundTop - Phaser.Math.Between(148, 172);
 
     const sprite = this.physics.add.image(x, y, hazard.texture) as MovingSprite;
     this.obstacles.add(sprite);
@@ -1334,24 +1517,29 @@ class RunnerScene extends Phaser.Scene {
     sprite.body.allowGravity = false;
 
     // Forgiving hitbox for air hazards
-    sprite.body.setSize(width * 0.5, height * 0.5).setOffset(width * 0.25, height * 0.25);
-    sprite.setVelocityX(-speed * 1.04);
+    sprite.body.setSize(width * 0.46, height * 0.46).setOffset(width * 0.27, height * 0.27);
+    sprite.setVelocityX(-speed * (isSwooper ? 1.12 : 1.04));
     sprite.setDepth(DEPTH_OBSTACLE);
     sprite.setData("label", hazard.emri);
     sprite.setData("hazardType", "air");
     sprite.setData("baseY", y);
+    sprite.setData("isSwooper", isSwooper);
+    sprite.setData("spawnTime", this.time.now);
 
     this.lastSpawnCategory = "air";
   }
 
-  private spawnCollectibleSafeArc() {
+  private spawnCollectibleSafeArc(isHighVault = false) {
     if (this.stats.status !== "playing") return;
 
     const target = this.nextCollectibleTarget();
     const texture = this.collectibleTexture(target);
     const speed = this.currentSpeed();
-    const x = this.scale.width + Phaser.Math.Between(180, 260);
-    const y = this.groundTop - Phaser.Math.Between(92, 136);
+    const x = this.scale.width + Phaser.Math.Between(160, 240);
+    // Standard jump arc: 78-114, High double-jump vault: 136-162
+    const y = isHighVault
+      ? this.groundTop - Phaser.Math.Between(136, 162)
+      : this.groundTop - Phaser.Math.Between(78, 114);
 
     const sprite = this.physics.add.image(x, y, texture) as MovingSprite;
     this.collectibles.add(sprite);
@@ -1362,6 +1550,7 @@ class RunnerScene extends Phaser.Scene {
     sprite.setData("target", target);
     sprite.setData("collected", false);
     sprite.setData("collectedTexture", texture === "shenje" ? "shenje-zbuluar" : texture);
+    sprite.setData("isHighVault", isHighVault);
 
     if (texture === "edi-character" || texture === "sali-character") {
       sprite.setDisplaySize(44, 66);
@@ -1379,6 +1568,10 @@ class RunnerScene extends Phaser.Scene {
       sprite.setDisplaySize(112, 39);
       sprite.body.setSize(88, 24);
       this.addLabel(sprite, this.targetTitle(target), 0, 104, true);
+    }
+
+    if (isHighVault) {
+      sprite.setTint(0xffd23f);
     }
   }
 
@@ -1464,14 +1657,18 @@ class RunnerScene extends Phaser.Scene {
       this.showBreakingNews("🧲 KONCESIONI MAGNETIK: TË GJITHA DOSJET PO THITHEN!");
     }
 
-    this.updateStats({
-      lives: 2, // Always restores full 2 lives upon collecting Sufllaqe
+    const statsUpdate: Partial<GameStats> = {
       activePowerUp: {
         type,
         remainingMs: durationMs,
         totalMs: durationMs,
       },
-    });
+    };
+    if (type === "shield") {
+      statsUpdate.lives = 2; // Only Sufllaqe Mburojë restores full 2 lives
+    }
+
+    this.updateStats(statsUpdate);
   }
 
   private deactivatePowerUp() {
@@ -1623,9 +1820,18 @@ class RunnerScene extends Phaser.Scene {
       onComplete: () => collectible.destroy(),
     });
 
+    // High-Vault Secret Golden Dossier bonus
+    const isHighVault = Boolean(collectible.getData("isHighVault"));
+    const highVaultBonus = isHighVault ? 300 : 0;
+    if (isHighVault) {
+      soundManager.playPowerup();
+      this.floatText(this.player.x, this.player.y - 32, "✨ DOSJE E ARTË NË AJËR (+300)!", "#ffd23f");
+      this.showBreakingNews("⭐ KËRCIM MAGJIK NË LARTËSI: Kapur dosja sekrete e artë!");
+    }
+
     const combo = Math.min(this.stats.combo + 1, 5);
     const gained = target.pike * this.stats.combo;
-    const score = this.stats.score + gained + combinationBonus;
+    const score = this.stats.score + gained + combinationBonus + highVaultBonus;
     const exposure = this.stats.exposure + 1;
 
     // Sparkles & Floating Score
@@ -1807,7 +2013,8 @@ class RunnerScene extends Phaser.Scene {
 
   private currentSpeedMultiplier() {
     const survivedSeconds = (this.time.now - this.roundStartAt) / 1000;
-    return Phaser.Math.Clamp(1 + survivedSeconds * SPEED_RAMP_RATE, 1, SPEED_RAMP_MAX);
+    const progressFactor = Math.min(1, this.stats.exposure / this.level.targetExposure);
+    return Phaser.Math.Clamp(1 + progressFactor * 0.52 + survivedSeconds * 0.004, 1, 1.82);
   }
 
   private currentSpeed() {
@@ -1893,6 +2100,15 @@ class RunnerScene extends Phaser.Scene {
   private continueEndlessMode() {
     this.isEndless = true;
     this.finishSpawned = false;
+    this.player.body.allowGravity = true;
+
+    this.scoreTimer?.destroy();
+    this.scoreTimer = this.time.addEvent({
+      delay: DISTANCE_TICK_MS,
+      loop: true,
+      callback: () => this.tickDistanceScore(),
+    });
+
     this.updateStats({
       status: "playing",
       isEndless: true,
@@ -2386,14 +2602,14 @@ class RunnerScene extends Phaser.Scene {
   }
 
   private spawnPrisonCage(x: number, y: number, antagonist: "edi" | "sali") {
-    const cage = this.add.image(x, y - 50, "prison-cage");
-    cage.setDepth(DEPTH_LABEL + 8);
-    cage.setScale(1.3);
-    cage.setAlpha(0.6);
+    const cage = this.add.image(x, y - 40, "prison-cage");
+    cage.setDepth(DEPTH_REWARD_FX + 2);
+    cage.setScale(1.15);
+    cage.setAlpha(0.75);
 
     const charSprite = this.add.image(x, y, antagonist === "edi" ? "edi-character" : "sali-character");
-    charSprite.setDisplaySize(44, 66);
-    charSprite.setDepth(DEPTH_LABEL + 6);
+    charSprite.setDisplaySize(40, 60);
+    charSprite.setDepth(DEPTH_REWARD_FX + 1);
 
     // Cage slam down animation
     this.tweens.add({
@@ -2401,18 +2617,21 @@ class RunnerScene extends Phaser.Scene {
       y: y,
       scaleX: 1,
       scaleY: 1,
-      alpha: 1,
-      duration: 100,
+      alpha: 0.9,
+      duration: 80,
       ease: "Back.easeOut",
       onComplete: () => {
-        this.cameras.main.shake(90, 0.008);
-        // Drop comically off-screen
+        // Subtle micro-shake so runner visibility is not blurred
+        this.cameras.main.shake(40, 0.003);
+        // Move backwards with world and drop comically off-screen quickly
         this.tweens.add({
           targets: [cage, charSprite],
+          x: x - 120,
           y: this.scale.height + 80,
           angle: Phaser.Math.Between(-15, 15),
-          delay: 450,
-          duration: 550,
+          alpha: 0,
+          delay: 80,
+          duration: 300,
           ease: "Cubic.easeIn",
           onComplete: () => {
             cage.destroy();
@@ -2436,25 +2655,27 @@ class RunnerScene extends Phaser.Scene {
       "FASADË TOTAL!",
     ];
     const text = customText || Phaser.Utils.Array.GetRandom(stamps);
-    const tilt = Phaser.Math.Between(-12, 12);
+    const tilt = Phaser.Math.Between(-8, 8);
     const clampedX = Phaser.Math.Clamp(x, 140, this.scale.width - 140);
+    // Position up high in the sky to never cover running corridors
+    const stampY = Math.min(y - 65, this.groundTop - 110);
 
     const stamp = this.add
-      .text(clampedX, Math.max(74, y - 48), `[ ${text} ]`, {
+      .text(clampedX, stampY, `[ ${text} ]`, {
         color: "#ff2a4b",
         fontFamily: "Outfit, Arial Black, sans-serif",
-        fontSize: "18px",
+        fontSize: "14px",
         fontStyle: "900",
         stroke: "#ffffff",
-        strokeThickness: 3,
-        backgroundColor: "rgba(16, 19, 29, 0.88)",
-        padding: { x: 8, y: 4 },
+        strokeThickness: 2.5,
+        backgroundColor: "rgba(16, 19, 29, 0.82)",
+        padding: { x: 7, y: 3 },
       })
       .setOrigin(0.5)
       .setAngle(tilt)
-      .setScale(2.2)
+      .setScale(1.8)
       .setAlpha(0)
-      .setDepth(DEPTH_LABEL + 10);
+      .setDepth(DEPTH_LABEL);
 
     // Snappy rubber-stamp slam
     this.tweens.add({
@@ -2462,16 +2683,15 @@ class RunnerScene extends Phaser.Scene {
       scaleX: 1,
       scaleY: 1,
       alpha: 1,
-      duration: 85,
+      duration: 75,
       ease: "Back.easeOut",
       onComplete: () => {
-        this.cameras.main.shake(60, 0.005);
         this.tweens.add({
           targets: stamp,
           alpha: 0,
-          y: stamp.y - 20,
-          delay: 450,
-          duration: 350,
+          y: stamp.y - 18,
+          delay: 220,
+          duration: 220,
           ease: "Quad.easeIn",
           onComplete: () => stamp.destroy(),
         });

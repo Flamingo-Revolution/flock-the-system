@@ -24,6 +24,7 @@ export type GameStats = {
 export type GameCallbacks = {
   onStatsChange: (stats: GameStats) => void;
   onLevelComplete: (levelId: string, score: number) => void;
+  onMuteToggle?: (muted: boolean) => void;
 };
 
 export type GameCommand =

@@ -7,25 +7,25 @@ export type ProtestRank = {
 };
 
 export function getProtestRank(score: number): ProtestRank {
-  if (score >= 28000) {
+  if (score >= 50000) {
     return {
       rank: "S+",
       title: "Kryekomandant Suprem",
       badge: "👑",
-      description: "Çliroi të gjithë sheshin, futi regjimin në burg dhe theu rekordin!",
+      description: "Çliroi të gjithë sheshin, zbuloi mbi 60 skandale dhe theu rekordin historik!",
       color: "#ffd23f",
     };
   }
-  if (score >= 18000) {
+  if (score >= 32000) {
     return {
       rank: "S",
       title: "Tmerri i Fasadës & SPAK",
       badge: "🌟",
-      description: "Zbuloi mbi 35 skandale me seri të pathyeshme!",
+      description: "Zbuloi mbi 40 skandale me seri të pathyeshme x5!",
       color: "#ff4f8b",
     };
   }
-  if (score >= 10000) {
+  if (score >= 18000) {
     return {
       rank: "A",
       title: "Zëri i Sheshit",
@@ -34,16 +34,16 @@ export function getProtestRank(score: number): ProtestRank {
       color: "#00f5b4",
     };
   }
-  if (score >= 5000) {
+  if (score >= 9000) {
     return {
       rank: "B",
       title: "Revolucionar Aktiv",
       badge: "🥈",
-      description: "Marshues i rregullt, kap deputetët dhe mbijeton natën me dronë.",
+      description: "Marshues i kalitur, kap deputetët dhe mbijeton natën me dronë e gaz lotësjellës.",
       color: "#38bdf8",
     };
   }
-  if (score >= 2000) {
+  if (score >= 4000) {
     return {
       rank: "C",
       title: "Pankartëmbajtës",
