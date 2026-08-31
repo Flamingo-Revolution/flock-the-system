@@ -292,7 +292,7 @@ export default function App() {
             </button>
           </div>
           <div className="rules-content">
-            <p>🦩 <strong>Flamingoja nuk ndalet:</strong> Prek ekranin ose shtyp <code>Space</code> / <code>W</code> / <code>↑</code> për të kërcyer.</p>
+            <p>🦩 <strong>Flamingoja nuk ndalet:</strong> Kliko ekranin ose shtyp <code>Space</code> / <code>W</code> / <code>↑</code> për të kërcyer.</p>
             <p>💥 <strong>Gris Propagandën:</strong> Kërce në sloganet fluturuese dhe kap deputetët arrogantë për të zbuluar të vërtetat e fshehura.</p>
             <p>🪶 <strong>Shpëto për një qime:</strong> Flamingoja ka 2 jetë – përplasja e parë të jep imunitet të përkohshëm!</p>
             <p>☀️ <strong>Cikli i Ditës:</strong> Mëngjesi kthehet në Perëndim, pastaj në Natë me drone, dhe agimi rinis sërish!</p>

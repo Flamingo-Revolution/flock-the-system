@@ -39,7 +39,7 @@ export const sheshiIRevolucionit: LevelDefinition = {
   id: "sheshi-i-revolucionit",
   name: "Sheshi i Revolucionit",
   phase: "Revolucioni i Flamingove",
-  intro: "Prek për të nisur marshimin",
+  intro: "Kliko për të nisur marshimin",
   objective: "Kërce mbi pengesat e regjimit dhe gris propagandën!",
   targetExposure: 15,
   speed: 260,
