@@ -377,6 +377,83 @@ class RunnerScene extends Phaser.Scene {
       }
     }
 
+    if (!this.textures.exists("graffiti-sufllaqe")) {
+      const canvasTex = this.textures.createCanvas("graffiti-sufllaqe", 84, 20);
+      if (canvasTex) {
+        const ctx = canvasTex.context;
+        ctx.fillStyle = "#f59e0b";
+        ctx.font = "900 12px 'Outfit', sans-serif";
+        ctx.fillText("SUFLLAQE!", 4, 15);
+        canvasTex.refresh();
+      }
+    }
+
+    if (!this.textures.exists("graffiti-bido")) {
+      const canvasTex = this.textures.createCanvas("graffiti-bido", 76, 20);
+      if (canvasTex) {
+        const ctx = canvasTex.context;
+        ctx.fillStyle = "#a855f7";
+        ctx.font = "900 12px 'Outfit', sans-serif";
+        ctx.fillText("BIDOOO!", 4, 15);
+        canvasTex.refresh();
+      }
+    }
+
+    if (!this.textures.exists("graffiti-kafja")) {
+      const canvasTex = this.textures.createCanvas("graffiti-kafja", 112, 20);
+      if (canvasTex) {
+        const ctx = canvasTex.context;
+        ctx.fillStyle = "#06b6d4";
+        ctx.font = "900 11px 'Outfit', sans-serif";
+        ctx.fillText("ÇOHU NGA KAFJA!", 4, 15);
+        canvasTex.refresh();
+      }
+    }
+
+    if (!this.textures.exists("graffiti-taotao")) {
+      const canvasTex = this.textures.createCanvas("graffiti-taotao", 78, 20);
+      if (canvasTex) {
+        const ctx = canvasTex.context;
+        ctx.fillStyle = "#84cc16";
+        ctx.font = "900 12px 'Outfit', sans-serif";
+        ctx.fillText("TAO TAO", 4, 15);
+        canvasTex.refresh();
+      }
+    }
+
+    if (!this.textures.exists("graffiti-piktori")) {
+      const canvasTex = this.textures.createCanvas("graffiti-piktori", 96, 20);
+      if (canvasTex) {
+        const ctx = canvasTex.context;
+        ctx.fillStyle = "#f43f5e";
+        ctx.font = "900 11px 'Outfit', sans-serif";
+        ctx.fillText("PIKTORI PLAK", 4, 15);
+        canvasTex.refresh();
+      }
+    }
+
+    if (!this.textures.exists("graffiti-gusha")) {
+      const canvasTex = this.textures.createCanvas("graffiti-gusha", 88, 20);
+      if (canvasTex) {
+        const ctx = canvasTex.context;
+        ctx.fillStyle = "#eab308";
+        ctx.font = "900 11px 'Outfit', sans-serif";
+        ctx.fillText("GONXHJA!", 4, 15);
+        canvasTex.refresh();
+      }
+    }
+
+    if (!this.textures.exists("graffiti-ikbela")) {
+      const canvasTex = this.textures.createCanvas("graffiti-ikbela", 98, 20);
+      if (canvasTex) {
+        const ctx = canvasTex.context;
+        ctx.fillStyle = "#f97316";
+        ctx.font = "900 11px 'Outfit', sans-serif";
+        ctx.fillText("IKBELA 20M€", 4, 15);
+        canvasTex.refresh();
+      }
+    }
+
     if (!this.textures.exists("ertv-van")) {
       const v = this.make.graphics({ x: 0, y: 0 }, false);
       v.fillStyle(0x1e293b, 1);
@@ -558,12 +635,18 @@ class RunnerScene extends Phaser.Scene {
 
         const sloganPairs = [
           { prop: "FASADA 100%", truth: "GËNJESHTËR!" },
+          { prop: "IKBELA HAJDUTI", truth: "20M EURO/KM" },
+          { prop: "BLENDI GUSHA", truth: "GONXHJA CASH" },
+          { prop: "SUFLLAQE", truth: "PËR 1 VOTË!" },
+          { prop: "BIDOOO!", truth: "HALEJA LIVE" },
+          { prop: "ÇOHU NGA KAFJA", truth: "SHESHI PO PRET" },
+          { prop: "TAO TAO", truth: "RENDI IMAGJINAR" },
+          { prop: "PIKTORI PLAK", truth: "SURREL VILLA" },
           { prop: "INCENERATORI", truth: "VETËM FATURA!" },
           { prop: "DOSJA 5D", truth: "TENDERAT VETES" },
           { prop: "STERILIZIMI", truth: "ÇMIM FLORIRI" },
-          { prop: "PATRONAZHISTËT", truth: "JU SHOHIM" },
+          { prop: "PATRONAZHISTËT", truth: "E DIMË ÇFARË PI" },
           { prop: "PORTI DURRËSIT", truth: "JAHTE JO PORT" },
-          { prop: "S'KA INFLACION", truth: "VAJI 300L" },
           { prop: "KONCESION 99V", truth: "SPAK PO VJEN" },
           { prop: "ERTV LIVE", truth: "SALLA BOSH" },
         ];
@@ -621,13 +704,20 @@ class RunnerScene extends Phaser.Scene {
 
     // Spawn Ground Graffiti Tags
     if (time >= this.nextGraffitiAt) {
-      this.nextGraffitiAt = time + Phaser.Math.Between(2800, 5200);
+      this.nextGraffitiAt = time + Phaser.Math.Between(2400, 4800);
       const graffitiKeys = [
         "graffiti-rnbnb",
         "graffiti-3m",
         "graffiti-burg",
         "graffiti-5d",
         "graffiti-spak",
+        "graffiti-sufllaqe",
+        "graffiti-bido",
+        "graffiti-kafja",
+        "graffiti-taotao",
+        "graffiti-piktori",
+        "graffiti-gusha",
+        "graffiti-ikbela",
       ];
       const key = Phaser.Utils.Array.GetRandom(graffitiKeys);
 
@@ -673,8 +763,8 @@ class RunnerScene extends Phaser.Scene {
     this.bossChaseActive = true;
 
     const antagonistKey = Math.random() < 0.5 ? "edi-character" : "sali-character";
-    const name = antagonistKey === "edi-character" ? "Edi Rama" : "Sali Berisha";
-    const quote = antagonistKey === "edi-character" ? "S'KA PROTESTË!" : "FOLTORE 24/7!";
+    const name = antagonistKey === "edi-character" ? "Piktori Plak (Edi Rama)" : "Sali Berisha";
+    const quote = antagonistKey === "edi-character" ? "PIKTORI PLAK: S'KA PROTESTË!" : "FOLTORE 24/7 DHE DITË E NATË!";
 
     this.showBreakingNews(`🚨 ALARM: ${name} po ndjek flamingon!`);
 

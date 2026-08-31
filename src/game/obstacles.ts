@@ -48,7 +48,7 @@ export type ObstaclePool = {
 // Unified Master Satirical Pool: Government Propaganda + Arrogant MPs + Protest Slogans
 export const sheshiIRevolucionitPool: ObstaclePool = {
   slogane: [
-    // Slogans strictly requested by user
+    // Slogans strictly requested by user + latest satirical themes
     {
       slogan: "RNBNB",
       eVerteta: "Rama n'burg, Berisha n'burg!",
@@ -84,25 +84,114 @@ export const sheshiIRevolucionitPool: ObstaclePool = {
       eVerteta: "Zeqine, nuk di të numërosh!",
       pike: 40,
     },
+    {
+      slogan: "IKBELA HAJDUTI!",
+      eVerteta: "20 milionë euro për 1 kilometër asfalt!",
+      pike: 46,
+    },
+    {
+      slogan: "BLENDI GUSHA!",
+      eVerteta: "Gonxhja me targa VIP dhe patenta me zarf!",
+      pike: 42,
+    },
+    {
+      slogan: "ÇOHUNI NGA KAFJA!",
+      eVerteta: "Revolucioni nuk bëhet me makiato në lokal!",
+      pike: 42,
+    },
+    {
+      slogan: "POSHTË PATRONAZHISTËT!",
+      eVerteta: "Të dhënat tona personale nuk shiten me tender!",
+      pike: 45,
+    },
+    {
+      slogan: "SUFLLAQE PËR VOTË!",
+      eVerteta: "Sufllaqja e partisë me qepë e pa mish!",
+      pike: 38,
+    },
+    {
+      slogan: "BIDOOO HALEJA!",
+      eVerteta: "Debat me ulërima në studio TV pa asnjë kuptim!",
+      pike: 40,
+    },
+    {
+      slogan: "TAO TAO RENDI!",
+      eVerteta: "Siguria me patrullim imagjinar dhe kamera ERTV!",
+      pike: 40,
+    },
+    {
+      slogan: "PIKTORI PLAK!",
+      eVerteta: "Fasada me çitjane dhe kulla mbi pronat publike!",
+      pike: 45,
+    },
   ],
 
   njerez: [
-    // The 2 Antagonists of the Revolution
+    // The Antagonists & Characters of the Parody
     {
-      emri: "Edi Rama",
-      roli: "Kryeministër i Fasadës",
-      thirrje: "S'KA PROTESTË, KA ERTV!",
-      eVerteta: "Rama n'burg!",
-      pike: 50,
+      emri: "Piktori Plak (Edi Rama)",
+      roli: "Kryearkitekt i Surrelit",
+      thirrje: "ÇITJANE DHE FASADË ME BOJË!",
+      eVerteta: "Rama n'burg! Pikturoi kullën mbi park.",
+      pike: 55,
       antagonist: "edi",
+    },
+    {
+      emri: "Ikbela Hajduti (Belinda Balluku)",
+      roli: "Mbretëresha e Asfaltit Elektoral",
+      thirrje: "TUNELI DHE 20 MILIONË EURO PËR KILOMETËR!",
+      eVerteta: "asfalti më i shtrenjtë në Evropë që çahet me shi",
+      pike: 52,
     },
     {
       emri: "Sali Berisha",
       roli: "Lider i Ballkonit",
-      thirrje: "FOLTORE PA LIMIT!",
+      thirrje: "FOLTORE PA LIMIT DHE DITË E NATË!",
       eVerteta: "Berisha n'burg!",
       pike: 50,
       antagonist: "sali",
+    },
+    {
+      emri: "Blendi Gusha (Gonxhja)",
+      roli: "Monopolisti i Patentave & Targave VIP",
+      thirrje: "TARGA ME POROSI DHE KARTON ME TEST!",
+      eVerteta: "koncesionet e patentave dhe automjeteve pa fund",
+      pike: 47,
+    },
+    {
+      emri: "Tao Tao",
+      roli: "Ministri i Sigurisë Imagjinare",
+      thirrje: "GJITHÇKA NË KONTROLL NË SHEVRAN!",
+      eVerteta: "patrullon me xhama të zinj dhe eskortë",
+      pike: 46,
+    },
+    {
+      emri: "Bidooo Haleja",
+      roli: "Debatuesi pa Filtër",
+      thirrje: "BIDOOO, Ç'PO THUA NË STUDIO?!",
+      eVerteta: "u përplas me mikrofon në transmetim direkt",
+      pike: 44,
+    },
+    {
+      emri: "Shpërndarësi i Sufllaqeve",
+      roli: "Financier Elektoral",
+      thirrje: "MERRE NJË SUFLLAQE ME QEPË!",
+      eVerteta: "këmbeu të ardhmen për një panine të ftohtë",
+      pike: 38,
+    },
+    {
+      emri: "Patronazhisti me Laptop",
+      roli: "Spiun Dixhital i Lagjes",
+      thirrje: "E DI ÇFARË KAFEJE KE PIRË MËNGJES!",
+      eVerteta: "i doli lista e të dhënave në Telegram",
+      pike: 42,
+    },
+    {
+      emri: "Revolucionari i Kafes",
+      roli: "Komentator Makiatoje",
+      thirrje: "ÇOHUNI NGA KAFJA... NESËR!",
+      eVerteta: "ka 4 orë ulur duke parë TikTok",
+      pike: 35,
     },
     // Top Political Figures & Scandal Protagonists
     {
@@ -127,20 +216,6 @@ export const sheshiIRevolucionitPool: ObstaclePool = {
       pike: 45,
     },
     {
-      emri: "Patronazhisti i Lagjes",
-      roli: "Spiun Dixhital",
-      thirrje: "E DI KU PUNON TI!",
-      eVerteta: "i iku lidhja e internetit",
-      pike: 38,
-    },
-    {
-      emri: "Deputeti me Kafe",
-      roli: "Komentator nga Lokali",
-      thirrje: "PROTESTONI SA TË DONI!",
-      eVerteta: "kafja e tij bën 500 lekë",
-      pike: 35,
-    },
-    {
       emri: "Deputeti me Syze Dielli",
       roli: "Ekspert i Komploteve",
       thirrje: "PAGUHEN NGA JASHTË!",
@@ -162,41 +237,6 @@ export const sheshiIRevolucionitPool: ObstaclePool = {
       pike: 37,
     },
     {
-      emri: "Kryetari i Komisionit",
-      roli: "Arkivues Plehrash",
-      thirrje: "S'KA KËRKESA ZYRTARE!",
-      eVerteta: "i hodhi peticionet në kosh",
-      pike: 34,
-    },
-    {
-      emri: "Këshilltari me Kostum",
-      roli: "Mbrojtës i Fasadës",
-      thirrje: "S'DINË PSE PROTESTOJNË!",
-      eVerteta: "s'e kupton as vetë ligjin",
-      pike: 32,
-    },
-    {
-      emri: "Deputeti i Sallës Bosh",
-      roli: "Orator Vetmitar",
-      thirrje: "PO FLAS ME POPULLIN!",
-      eVerteta: "në sallë vetëm roja",
-      pike: 30,
-    },
-    {
-      emri: "Zoti Shirit",
-      roli: "Prerës Ceremonial",
-      thirrje: "E HAPËM OBJEKTIN!",
-      eVerteta: "nuk ka drita as ujë",
-      pike: 28,
-    },
-    {
-      emri: "Zonja Selfie",
-      roli: "Drejtoreshë Instagrami",
-      thirrje: "DOLI BUKUR FOTOJA!",
-      eVerteta: "rruga u shemb të nesërmen",
-      pike: 29,
-    },
-    {
       emri: "Zoti Tender",
       roli: "Mik i Procedurave",
       thirrje: "GARË E NDERSHME!",
@@ -206,38 +246,79 @@ export const sheshiIRevolucionitPool: ObstaclePool = {
   ],
 
   ministri: [
+    { emri: "Ministria e Ikbela Hajdutit dhe Asfaltit" },
+    { emri: "Ministria e Blendi Gushës dhe Patentave" },
+    { emri: "Ministria e Sufllaqeve Elektorale" },
+    { emri: "Ministria e Tao Tao dhe Rendit" },
+    { emri: "Ministria e Çohuni nga Kafja" },
+    { emri: "Ministria e Pikturave në Surrel" },
     { emri: "Ministria e Inceneratorëve pa Tym" },
     { emri: "Ministria e Drejtorëve 5D" },
     { emri: "Ministria e Kullave mbi Park" },
     { emri: "Ministria e Sterilizimit të Florinjtë" },
-    { emri: "Ministria e Koncesioneve 99-Vjeçare" },
-    { emri: "Ministria e Gazit Lotsjellës" },
     { emri: "Ministria e Portit me Jahte" },
-    { emri: "Ministria e Asfaltit Elektoral" },
-    { emri: "Ministria e Peticioneve në Kosh" },
-    { emri: "Ministria e Transparencës me Fjalëkalim" },
   ],
 
   pengesaToke: [
-    { lloj: "ministri", emri: "Ministria e Inceneratorëve pa Tym", texture: "ministri" },
-    { lloj: "ministri", emri: "Ministria e Drejtorëve 5D", texture: "ministri" },
-    { lloj: "ministri", emri: "Ministria e Kullave mbi Park", texture: "ministri" },
-    { lloj: "letra", emri: "Dosja e Incineratorëve", texture: "leter-1" },
-    { lloj: "letra", emri: "Dosja 5D me tendera fiktivë", texture: "leter-2" },
-    { lloj: "letra", emri: "Fatura e darkës në New York", texture: "leter-3" },
-    { lloj: "podium", emri: "Podiumi i fjalimeve boshe", texture: "podium" },
-    { lloj: "podium", emri: "Foltore me megafon", texture: "podium" },
+    { lloj: "ministri", emri: "Ministria e Ikbela Hajdutit", texture: "ministri" },
+    { lloj: "ministri", emri: "Ministria e Sufllaqeve Elektorale", texture: "ministri" },
+    { lloj: "ministri", emri: "Ministria e Pikturave në Surrel", texture: "ministri" },
+    { lloj: "letra", emri: "Fatura e Asfaltit të Ikbelës (20M€/km)", texture: "leter-1" },
+    { lloj: "letra", emri: "Koncesioni i Patentave të Gonxhes", texture: "leter-2" },
+    { lloj: "letra", emri: "Fatura e 100,000 Sufllaqeve", texture: "leter-3" },
+    { lloj: "podium", emri: "Podiumi i Asfaltit të Ikbelës", texture: "podium" },
+    { lloj: "podium", emri: "Foltore me megafon e Ballkonit", texture: "podium" },
   ],
 
   rreziqeAjri: [
-    { lloj: "dron", emri: "Droni i vëzhgimit të protestës", texture: "dron" },
-    { lloj: "mikrofon", emri: "Mikrofoni me pyetje të miratuara", texture: "mikrofon" },
+    { lloj: "dron", emri: "Droni i vëzhgimit të Patronazhistëve", texture: "dron" },
+    { lloj: "mikrofon", emri: "Mikrofoni pa filtër i Bidooo Halesë", texture: "mikrofon" },
     { lloj: "kamera", emri: "Kamera e ERTV me filtër bukurie", texture: "kamera" },
-    { lloj: "dron", emri: "Droni me tender 500 mijë euro", texture: "dron" },
+    { lloj: "dron", emri: "Droni me sufllaqe elektorale", texture: "dron" },
     { lloj: "kamera", emri: "Kamera e kronikës së gatshme", texture: "kamera" },
   ],
 
   dokumente: [
+    {
+      titull: "Dosja e Asfaltit të Ikbelës",
+      eVerteta: "20 milionë euro për kilometër që çahet me shiun e parë",
+      pike: 52,
+    },
+    {
+      titull: "Koncesioni i Targave VIP (Gonxhja)",
+      eVerteta: "targa të personalizuara me miliona lekë fitim privat",
+      pike: 48,
+    },
+    {
+      titull: "Fatura e 100,000 Sufllaqeve",
+      eVerteta: "sufllaqe elektorale me faturë nga taksat tona",
+      pike: 48,
+    },
+    {
+      titull: "Baza e Patronazhistëve",
+      eVerteta: "të dhënat tona personale në dorë të partisë",
+      pike: 46,
+    },
+    {
+      titull: "Transkripti: Bidooo Haleja",
+      eVerteta: "debat pa asnjë fakt, vetëm të bërtitura në studio",
+      pike: 44,
+    },
+    {
+      titull: "Manuali: Çohuni nga Kafja",
+      eVerteta: "thirrja për marshim që zgjoi sheshin",
+      pike: 45,
+    },
+    {
+      titull: "Plani i Tao Tao për Rendin",
+      eVerteta: "premtime boshe para kamerave të gatshme",
+      pike: 44,
+    },
+    {
+      titull: "Tabloja e Piktori Plak",
+      eVerteta: "kulla 50-katëshe e fshehur pas pikturës abstrakte",
+      pike: 50,
+    },
     {
       titull: "Dosja e Incineratorëve",
       eVerteta: "miliona euro për plehra imagjinare",
@@ -257,36 +338,6 @@ export const sheshiIRevolucionitPool: ObstaclePool = {
       titull: "Porti i Durrësit",
       eVerteta: "jahte e kulla në vend të portit publik",
       pike: 48,
-    },
-    {
-      titull: "Koncesioni i Check-Up",
-      eVerteta: "analiza fiktive me paratë e taksave",
-      pike: 42,
-    },
-    {
-      titull: "Baza e Patronazhistëve",
-      eVerteta: "të dhënat tona në dorë të partisë",
-      pike: 44,
-    },
-    {
-      titull: "Fatura e Steak-ut në NY",
-      eVerteta: "darkë luksoze me faturë shteti",
-      pike: 45,
-    },
-    {
-      titull: "Kulla 60-Katëshe te Sahati",
-      eVerteta: "kulla private mbulon qytetin",
-      pike: 42,
-    },
-    {
-      titull: "Peticioni i Protestuesve",
-      eVerteta: "u arkivua në kosh të plehrave",
-      pike: 35,
-    },
-    {
-      titull: "Raporti Sekret i Sheshit",
-      eVerteta: "protesta po shtohet çdo minutë",
-      pike: 40,
     },
   ],
 };
