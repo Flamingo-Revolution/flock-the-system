@@ -13,6 +13,7 @@ const DEFAULT_LEVEL_ID = levels[0].id;
 
 export default function App() {
   const gameHost = useRef<HTMLDivElement | null>(null);
+  const gameRef = useRef<any>(null);
   const bestScoreRef = useRef(0);
   const selectedLevel = getLevel(DEFAULT_LEVEL_ID);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
@@ -64,26 +65,55 @@ export default function App() {
         ? `🦩🏛️ Futa Ramën & Berishën në burg! Grada ${rank.rank} "${rank.title}" me ${stats.score} pikë dhe ${stats.exposure} skandale te "Flamingoja e Fundit"! RNBNB! #FlockTheSystem`
         : `🦩 Arrita Gradën ${rank.rank} "${rank.title}" me ${stats.score} pikë te "Flamingoja e Fundit"! RNBNB! #FlockTheSystem`;
 
-    if (navigator.share) {
+    let fileToShare: File | null = null;
+    if (gameRef.current && gameRef.current.canvas) {
       try {
-        await navigator.share({
-          title: "Flamingoja e Fundit - Flock The System",
-          text: shareText,
-          url: window.location.href,
-        });
+        const dataUrl = gameRef.current.canvas.toDataURL("image/png");
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        fileToShare = new File([blob], "flamingo-score.png", { type: "image/png" });
+      } catch (err) {
+        // Ignore canvas capture errors
+      }
+    }
+
+    if (navigator.share) {
+      const shareData: ShareData = {
+        title: "Flamingoja e Fundit - Flock The System",
+        text: shareText,
+        url: window.location.href,
+      };
+      if (fileToShare && navigator.canShare && navigator.canShare({ files: [fileToShare] })) {
+        shareData.files = [fileToShare];
+      }
+      try {
+        await navigator.share(shareData);
         setShareToast("✅ Rezultati u nda!");
         setTimeout(() => setShareToast(null), 2500);
         return;
       } catch (err) {
-        // Fallback to clipboard
+        // Fallback to clipboard if share was aborted or failed
+      }
+    }
+
+    if (!navigator.share && fileToShare) {
+      try {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(fileToShare);
+        a.download = "flamingo-score.png";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch (err) {
+        // ignore
       }
     }
 
     if (navigator.clipboard) {
       try {
         await navigator.clipboard.writeText(`${shareText}\n${window.location.href}`);
-        setShareToast("📋 Teksti u kopjua! Gati për Story / WhatsApp!");
-        setTimeout(() => setShareToast(null), 2500);
+        setShareToast(fileToShare ? "🖼️ Foto u shkarkua! Teksti u kopjua!" : "📋 Teksti u kopjua! Gati për Story / WhatsApp!");
+        setTimeout(() => setShareToast(null), 3500);
       } catch (err) {
         setShareToast("⚠️ Nuk mund të kopjohej teksti.");
         setTimeout(() => setShareToast(null), 2000);
@@ -140,8 +170,11 @@ export default function App() {
       },
     });
 
+    gameRef.current = game;
+
     return () => {
       game.destroy(true);
+      gameRef.current = null;
     };
   }, [selectedLevel.id]);
 

@@ -2765,6 +2765,7 @@ export function createGame(parent: HTMLElement, levelId: string, callbacks: Game
       antialias: true,
       powerPreference: "high-performance",
       desynchronized: true,
+      preserveDrawingBuffer: true,
     },
     fps: {
       target: 60,
