@@ -5,6 +5,7 @@ import { createGame } from "./game/createGame";
 import { GAME_COMMAND_EVENT, type GameCommand, type GameStats } from "./game/events";
 import { getLevel, levels } from "./game/levels";
 import { generateCertificateCode, getProtestRank } from "./game/ranks";
+import { renderShareImage } from "./game/shareImage";
 import "./styles.css";
 
 const BEST_SCORE_KEY = "flamingoja-e-fundit-best-score";
@@ -68,84 +69,15 @@ export default function App() {
     let fileToShare: File | null = null;
     if (gameRef.current && gameRef.current.canvas) {
       try {
-        const gameCanvas = gameRef.current.canvas;
-        const shareCanvas = document.createElement("canvas");
-        shareCanvas.width = 1080;
-        shareCanvas.height = 1920;
-        const ctx = shareCanvas.getContext("2d");
-
-        if (ctx) {
-          // Fill background
-          ctx.fillStyle = "#101827";
-          ctx.fillRect(0, 0, 1080, 1920);
-
-          // Draw game scene as cover background
-          const scale = Math.max(1080 / gameCanvas.width, 1920 / gameCanvas.height);
-          const w = gameCanvas.width * scale;
-          const h = gameCanvas.height * scale;
-          const x = (1080 - w) / 2;
-          const y = (1920 - h) / 2;
-          ctx.drawImage(gameCanvas, x, y, w, h);
-
-          // Add dark gradient overlay to make text pop
-          const gradient = ctx.createLinearGradient(0, 0, 0, 1920);
-          gradient.addColorStop(0, "rgba(16, 24, 39, 0.4)");
-          gradient.addColorStop(0.5, "rgba(16, 24, 39, 0.85)");
-          gradient.addColorStop(1, "rgba(16, 24, 39, 0.98)");
-          ctx.fillStyle = gradient;
-          ctx.fillRect(0, 0, 1080, 1920);
-
-          // Setup Typography
-          ctx.textAlign = "center";
-          
-          // Title
-          ctx.font = "bold 80px sans-serif";
-          ctx.fillStyle = "#ff5f9f";
-          ctx.fillText("FLAMINGOJA E FUNDIT", 540, 200);
-
-          ctx.font = "40px sans-serif";
-          ctx.fillStyle = "#e5e7eb";
-          ctx.fillText("Rezultati im në betejën me sistemin:", 540, 280);
-
-          // Score
-          ctx.font = "bold 240px sans-serif";
-          ctx.fillStyle = "#ffe172";
-          ctx.fillText(stats.score.toString(), 540, 650);
-          ctx.font = "bold 60px sans-serif";
-          ctx.fillText("PIKË", 540, 750);
-
-          // Rank
-          ctx.font = "bold 180px 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
-          ctx.fillStyle = rank.color;
-          ctx.fillText(rank.badge, 540, 1100);
-
-          ctx.font = "bold 80px sans-serif";
-          ctx.fillText(rank.rank, 540, 1220);
-
-          ctx.font = "italic 45px sans-serif";
-          ctx.fillStyle = "#ffffff";
-          ctx.fillText(rank.title, 540, 1300);
-
-          // Certificate
-          if (stats.status === "won") {
-            ctx.font = "bold 45px sans-serif";
-            ctx.fillStyle = "#06d6a0";
-            ctx.fillText(`✅ SPAK VERIFIED: DOSJA U MBYLL`, 540, 1450);
-            ctx.fillStyle = "#facc15";
-            ctx.fillText(`CERTIFIKATA: ${certCode}`, 540, 1530);
-          }
-
-          // Footer
-          ctx.font = "bold 60px sans-serif";
-          ctx.fillStyle = "#8cd6ea";
-          ctx.fillText("#FlockTheSystem", 540, 1750);
-          ctx.font = "35px sans-serif";
-          ctx.fillStyle = "#9ca3af";
-          ctx.fillText("Luaj tani te flamingo-revolution.github.io", 540, 1830);
-
-          const dataUrl = shareCanvas.toDataURL("image/png");
-          const res = await fetch(dataUrl);
-          const blob = await res.blob();
+        const blob = await renderShareImage({
+          gameCanvas: gameRef.current.canvas,
+          score: stats.score,
+          exposure: stats.exposure,
+          rank,
+          certCode,
+          won: stats.status === "won",
+        });
+        if (blob) {
           fileToShare = new File([blob], "flamingo-score.png", { type: "image/png" });
         }
       } catch (err) {
