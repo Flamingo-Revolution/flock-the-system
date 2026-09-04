@@ -469,7 +469,7 @@ export async function renderShareImage({
 
   ctx.fillStyle = "rgba(255,255,255,0.55)";
   ctx.font = `600 26px ${BODY_FONT}`;
-  ctx.fillText("flamingo-revolution.github.io/flock-the-system", cx, footerY + 74);
+  ctx.fillText("flamingorevolution.eu/lojerat", cx, footerY + 74);
 
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/png"));
 }

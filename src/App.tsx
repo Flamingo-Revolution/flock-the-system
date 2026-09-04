@@ -11,6 +11,7 @@ import "./styles.css";
 const BEST_SCORE_KEY = "flamingoja-e-fundit-best-score";
 const GOLDEN_SKIN_UNLOCKED_KEY = "flamingoja-golden-skin-unlocked";
 const DEFAULT_LEVEL_ID = levels[0].id;
+const OFFICIAL_URL = "https://www.flamingorevolution.eu/lojerat/flamingoja-e-fundit/";
 
 export default function App() {
   const gameHost = useRef<HTMLDivElement | null>(null);
@@ -91,7 +92,7 @@ export default function App() {
     // Fallback if image generation fails
     if (navigator.clipboard) {
       try {
-        await navigator.clipboard.writeText(`${shareText}\n${window.location.href}`);
+        await navigator.clipboard.writeText(`${shareText}\n${OFFICIAL_URL}`);
         setShareToast("📋 Teksti u kopjua! Gati për Story / WhatsApp!");
         setTimeout(() => setShareToast(null), 2500);
       } catch (err) {
@@ -610,7 +611,7 @@ export default function App() {
                       await navigator.share({
                         title: "Flamingoja e Fundit - Flock The System",
                         text: shareModalData.text,
-                        url: window.location.href,
+                        url: OFFICIAL_URL,
                         files: [shareModalData.file]
                       });
                     } catch (e) {}
@@ -627,7 +628,7 @@ export default function App() {
                 style={{ textAlign: 'center', textDecoration: 'none', display: 'block', width: '100%', boxSizing: 'border-box' }}
                 onClick={() => {
                   if (navigator.clipboard) {
-                    navigator.clipboard.writeText(`${shareModalData.text}\n${window.location.href}`).catch(() => {});
+                    navigator.clipboard.writeText(`${shareModalData.text}\n${OFFICIAL_URL}`).catch(() => {});
                   }
                   setShareToast("🖼️ Imazhi u shkarkua! Teksti u kopjua!");
                   setTimeout(() => setShareToast(null), 3000);
