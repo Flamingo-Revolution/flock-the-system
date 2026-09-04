@@ -53,6 +53,7 @@ export default function App() {
   });
 
   const [shareToast, setShareToast] = useState<string | null>(null);
+  const [shareModalData, setShareModalData] = useState<{ url: string; text: string; file: File } | null>(null);
   const rank = getProtestRank(stats.score);
   const certCode = generateCertificateCode(stats.score);
 
@@ -66,7 +67,6 @@ export default function App() {
         ? `🦩🏛️ Futa Ramën & Berishën në burg! Grada ${rank.rank} "${rank.title}" me ${stats.score} pikë dhe ${stats.exposure} skandale te "Flamingoja e Fundit"! RNBNB! #FlockTheSystem`
         : `🦩 Arrita Gradën ${rank.rank} "${rank.title}" me ${stats.score} pikë te "Flamingoja e Fundit"! RNBNB! #FlockTheSystem`;
 
-    let fileToShare: File | null = null;
     if (gameRef.current && gameRef.current.canvas) {
       try {
         const blob = await renderShareImage({
@@ -78,50 +78,22 @@ export default function App() {
           won: stats.status === "won",
         });
         if (blob) {
-          fileToShare = new File([blob], "flamingo-score.png", { type: "image/png" });
+          const url = URL.createObjectURL(blob);
+          const file = new File([blob], "flamingo-score.png", { type: "image/png" });
+          setShareModalData({ url, text: shareText, file });
+          return;
         }
       } catch (err) {
         // Ignore canvas capture errors
       }
     }
 
-    if (navigator.share) {
-      const shareData: ShareData = {
-        title: "Flamingoja e Fundit - Flock The System",
-        text: shareText,
-        url: window.location.href,
-      };
-      if (fileToShare && navigator.canShare && navigator.canShare({ files: [fileToShare] })) {
-        shareData.files = [fileToShare];
-      }
-      try {
-        await navigator.share(shareData);
-        setShareToast("✅ Rezultati u nda!");
-        setTimeout(() => setShareToast(null), 2500);
-        return;
-      } catch (err) {
-        // Fallback to clipboard if share was aborted or failed
-      }
-    }
-
-    if (!navigator.share && fileToShare) {
-      try {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(fileToShare);
-        a.download = "flamingo-score.png";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      } catch (err) {
-        // ignore
-      }
-    }
-
+    // Fallback if image generation fails
     if (navigator.clipboard) {
       try {
         await navigator.clipboard.writeText(`${shareText}\n${window.location.href}`);
-        setShareToast(fileToShare ? "🖼️ Foto u shkarkua! Teksti u kopjua!" : "📋 Teksti u kopjua! Gati për Story / WhatsApp!");
-        setTimeout(() => setShareToast(null), 3500);
+        setShareToast("📋 Teksti u kopjua! Gati për Story / WhatsApp!");
+        setTimeout(() => setShareToast(null), 2500);
       } catch (err) {
         setShareToast("⚠️ Nuk mund të kopjohej teksti.");
         setTimeout(() => setShareToast(null), 2000);
@@ -596,6 +568,73 @@ export default function App() {
               <p>
                 <code>Space</code> / <code>W</code> / <code>↑</code>: Kërce & Double Jump &nbsp;|&nbsp; <code>P</code>: Pauzë &nbsp;|&nbsp; <code>R</code>: Rinisje &nbsp;|&nbsp; <code>M</code>: Zëri
               </p>
+            </div>
+          </div>
+        </aside>
+      ) : null}
+
+      {/* Share Image Modal */}
+      {shareModalData ? (
+        <aside className="stage-drawer share-modal" aria-label="Ndaj Rezultatin">
+          <div className="stage-drawer-header">
+            <h2>📢 Ndaj ose Ruaj</h2>
+            <button
+              type="button"
+              className="drawer-close-btn"
+              onClick={() => {
+                URL.revokeObjectURL(shareModalData.url);
+                setShareModalData(null);
+              }}
+            >
+              ✕
+            </button>
+          </div>
+          <div className="rules-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '1.5rem', overflowY: 'auto' }}>
+            <img 
+              src={shareModalData.url} 
+              alt="Score Preview" 
+              style={{ maxHeight: '45vh', borderRadius: '8px', border: '3px solid #151515', boxShadow: '6px 6px 0 #151515', objectFit: 'contain' }} 
+            />
+            <p style={{ textAlign: 'center', fontSize: '0.9rem', color: '#fff', margin: 0 }}>
+              Imazhi u gjenerua! Mund ta ruash në pajisje ose ta ndash direkt.
+            </p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: '300px' }}>
+              {navigator.share && navigator.canShare && navigator.canShare({ files: [shareModalData.file] }) ? (
+                <button
+                  type="button"
+                  className="primary-start"
+                  style={{ width: '100%', justifyContent: 'center' }}
+                  onClick={async () => {
+                    try {
+                      await navigator.share({
+                        title: "Flamingoja e Fundit - Flock The System",
+                        text: shareModalData.text,
+                        url: window.location.href,
+                        files: [shareModalData.file]
+                      });
+                    } catch (e) {}
+                  }}
+                >
+                  📲 Ndaj në App (Story / WhatsApp)
+                </button>
+              ) : null}
+
+              <a
+                href={shareModalData.url}
+                download="flamingo-score.png"
+                className="share-button"
+                style={{ textAlign: 'center', textDecoration: 'none', display: 'block', width: '100%', boxSizing: 'border-box' }}
+                onClick={() => {
+                  if (navigator.clipboard) {
+                    navigator.clipboard.writeText(`${shareModalData.text}\n${window.location.href}`).catch(() => {});
+                  }
+                  setShareToast("🖼️ Imazhi u shkarkua! Teksti u kopjua!");
+                  setTimeout(() => setShareToast(null), 3000);
+                }}
+              >
+                ⬇️ Shkarko & Kopjo Tekstin
+              </a>
             </div>
           </div>
         </aside>
