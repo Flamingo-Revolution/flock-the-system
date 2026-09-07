@@ -55,7 +55,6 @@ export default function App() {
 
   const [shareToast, setShareToast] = useState<string | null>(null);
   const [shareModalData, setShareModalData] = useState<{ url: string; text: string; file: File } | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const rank = getProtestRank(stats.score);
   const certCode = generateCertificateCode(stats.score);
 
@@ -119,23 +118,6 @@ export default function App() {
     const nextMuted = soundManager.toggleMute();
     setIsMuted(nextMuted);
   }
-
-  function toggleFullscreen(event: React.MouseEvent) {
-    event.stopPropagation();
-    if (!document.fullscreenElement) {
-      document.body.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
-  }
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
 
   useEffect(() => {
     if (!gameHost.current) return;
@@ -248,16 +230,6 @@ export default function App() {
         </div>
 
         <div className="hud-actions">
-          <button
-            type="button"
-            className="hud-action-btn"
-            onClick={toggleFullscreen}
-            title={isFullscreen ? "Mbyll Fullscreen" : "Hap Fullscreen"}
-            aria-label="Fullscreen"
-          >
-            {isFullscreen ? "↙️" : "↗️"}
-          </button>
-          
           <button
             type="button"
             className="hud-action-btn"
