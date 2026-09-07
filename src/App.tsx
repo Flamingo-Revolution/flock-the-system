@@ -629,7 +629,7 @@ export default function App() {
             </p>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: '300px' }}>
-              {navigator.share && navigator.canShare && navigator.canShare({ files: [shareModalData.file] }) ? (
+              {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [shareModalData.file] }) ? (
                 <button
                   type="button"
                   className="primary-start"
